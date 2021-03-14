@@ -48,23 +48,27 @@ const int ECHO_PIN = 49;
 
 //set up 3 IR sensors, ultra sonic and gyro
 
-int irSensor1 = A0;
+int irSensor1 = A1;
 int ir1ADC;
 int ir1val;
 
-int irSensor2 = A1;
+int irSensor2 = A2;
 int ir2ADC;
 int ir2val;
 
-int irSensor3 = A2;
+int irSensor3 = A3;
 int ir3ADC;
 int ir3val;
+
+int irSensor4 = A4;
+int ir4ADC;
+int ir4val;
 
 
 //------------- Gyro variables----------------------------
 
-int gyroSensor = A3;
-int T = 100;
+int gyroSensor = A5;
+float T = millis();
 byte serialRead = 0;
 int gyroSignalADC = 0;
 float gyroSupplyVoltage = 5;
@@ -144,24 +148,29 @@ void loop(void) //main loop
   Serial.print("IR Sensor 2 distance: ");
   Serial.println(ir2val);
 
-//  //  ir3ADC = analogRead(irSensor3);
-//  //  Serial.print("IR Sensor 3 ADC: ");
-//  //  Serial.println(ir3ADC);
-//  //  ir3val = ir3ADC * 0.5;
-//  //  Serial.print("IR Sensor 3 distance: ");
-//  //  Serial.println(ir3val);
-//
-  
+  ir3ADC = analogRead(irSensor3);
+  Serial.print("IR Sensor 3 ADC: ");
+  Serial.println(ir3ADC);
+  ir3val = ir3ADC * 0.5;
+  Serial.print("IR Sensor 3 distance: ");
+  Serial.println(ir3val);
+
+  ir4ADC = analogRead(irSensor4);
+  Serial.print("IR Sensor 4 ADC: ");
+  Serial.println(ir4ADC);
+  ir4val = ir4ADC * 0.5;
+  Serial.print("IR Sensor 4 distance: ");
+  Serial.println(ir4val);
+
   HC_SR04_range();
   readGyro();
-  
+
   delay(1000);
 
- 
-  /*
-    static STATE machine_state = INITIALISING;
-    //Finite-state machine Code
-    switch (machine_state) {
+
+  static STATE machine_state = INITIALISING;
+  //Finite-state machine Code
+  switch (machine_state) {
     case INITIALISING:
       machine_state = initialising();
       break;
@@ -171,9 +180,8 @@ void loop(void) //main loop
     case STOPPED: //Stop of Lipo Battery voltage is too low, to protect Battery
       machine_state =  stopped();
       break;
-    };
+  };
 
-  */
 }
 
 
@@ -199,7 +207,7 @@ STATE running() {
 
     SerialCom->println("RUNNING---------");
     speed_change_smooth();
-    Analog_Range_A4();
+    //Analog_Range_A4();
 
 #ifndef NO_READ_GYRO
     GYRO_reading();
@@ -404,11 +412,11 @@ void HC_SR04_range()
 }
 #endif
 
-void Analog_Range_A4()
-{
-  SerialCom->print("Analog Range A4:");
-  SerialCom->println(analogRead(A4));
-}
+//void Analog_Range_A4()
+//{
+//  SerialCom->print("Analog Range A4:");
+//  SerialCom->println(analogRead(A4));
+//}
 
 #ifndef NO_READ_GYRO
 void GYRO_reading()
@@ -474,9 +482,7 @@ void read_serial_command()
         SerialCom->println("stop");
         break;
     }
-
   }
-
 }
 
 //----------------------Motor moments------------------------
@@ -570,7 +576,9 @@ void readGyro() {
 
   if (angularVelocity >= rotationThreshold || angularVelocity <= -rotationThreshold) {
     // we are running a loop in T (of T/1000 second).
+    T = millis() - T;
     float angleChange = angularVelocity / (1000 / T);
+    T = millis();
     currentAngle += angleChange;
   }
 
@@ -589,7 +597,4 @@ void readGyro() {
   Serial.print(angularVelocity);
   Serial.print(" ");
   Serial.println(currentAngle);
-  delay (T);
-
-
 }
