@@ -63,21 +63,36 @@ float speed_change;
 //My globals
 
 float tru[] = {0, 0}; //true X then Y distnace
+<<<<<<< HEAD
 float Y = 0; //from ultrasonic
 float sensDist[] = {83.1, 103.64}; //distance between sensors X then Y
+=======
+float sensDist[] = {40, 40}; //distance between sensors X then Y
+>>>>>>> Reuben_Compiles
 
 
 //Controller
 float setP[] = {0, 150.0, 150.0}; //x1, 150mm, 150mm
+<<<<<<< HEAD
 float cur[] = {0, tru[0], Y}; //x2, true X, true Y
+=======
+float cur[] = {0, 0, 0}; //x2, true X, true Y
+>>>>>>> Reuben_Compiles
 
 float kp[] = {10, 1, 1};//1 is largest gain - depedns on error size seen? set to 800m?? so 1*800 = 800 max value is 1000, need 200 for corretcing angle
 float ki[] = {0, 0, 0};
 
+<<<<<<< HEAD
 float error[] = {0, 0, 0}; // 0 difference between x1 and x2, 1 differnce between true X and 150mm, 2 difference between true Y and 150mm
 float ierror[] = {0, 0, 0};
 
 int angle[] = {285, 195, 105}; 
+=======
+float error[] = {setP[0]-cur[0], setP[1]-cur[1], setP[2]-cur[2]}; // 0 difference between x1 and x2, 1 differnce between true X and 150mm, 2 difference between true Y and 150mm
+float ierror[] = {0, 0, 0};
+
+
+>>>>>>> Reuben_Compiles
 
 int scenario = 1; //either alligning or 
 int rotations = 0;
@@ -120,6 +135,7 @@ void loop(void) //main loop
       machine_state = initialising();
       break;
     case RUNNING: //Lipo Battery Volage OK
+<<<<<<< HEAD
      // machine_state =  running();
 
 
@@ -128,6 +144,13 @@ void loop(void) //main loop
       //Code boi
 
      //read_serial_command();
+=======
+      machine_state =  running();
+
+
+
+      //Code boi
+>>>>>>> Reuben_Compiles
     
       measure();      
       
@@ -138,10 +161,17 @@ void loop(void) //main loop
         case 2: //OPERATING      
           forward();
           break;
+<<<<<<< HEAD
         case 3: //Rotating
           rotate();  
           break;
         case 4: //stop everything
+=======
+        case 3:
+          rotate();  
+          break;
+        case 4:
+>>>>>>> Reuben_Compiles
           stop();
       }
 
@@ -564,9 +594,12 @@ void alignLHS () {
     speed_val = Controller(0);
     ccw(); //or cw, the controller will output a positive or negative
   }
+<<<<<<< HEAD
 
   //gyro = 0;
   
+=======
+>>>>>>> Reuben_Compiles
 }
 
 
@@ -575,19 +608,26 @@ void measure () {
   int i = 0;
   //tommmmm jskbdjknjksd
 
+<<<<<<< HEAD
   //angle boi
+=======
+>>>>>>> Reuben_Compiles
   float x1;
   float x2;
   float y1;
   float y2;
+<<<<<<< HEAD
 
   
+=======
+>>>>>>> Reuben_Compiles
   float sens[] = {x1, y1, x2, y2};
 
   float theta[] = {};
   float avg[] = {};
   float dif[] = {error[0], y1-y2};
 
+<<<<<<< HEAD
   //read everything?
 
   //angle = gyro boi
@@ -600,6 +640,8 @@ void measure () {
 //  tru[0] = avg * cos(theta);
 //  tru[1] = avg * cos(theta);
 //  Y = avg *cos(theta);
+=======
+>>>>>>> Reuben_Compiles
 
   while (i < 2){
     avg[i] = (sens[i] + sens[i+1])/2;
@@ -611,9 +653,12 @@ void measure () {
      i++;   
   }
   i = 0;
+<<<<<<< HEAD
 
 
   Y = Y * cos(theta[1]); //for the ultrasonics sensor
+=======
+>>>>>>> Reuben_Compiles
 }
 
 
@@ -626,9 +671,12 @@ void forwards(){
   if (abs(error[1]) > 6) {                //check if the robot is 150mm away from it
     cor_factor = Controller(0);         //if x1 > x2 -> positive so needs to added on as a negative to robot
   }
+<<<<<<< HEAD
   else {
     ierror[0,1,2] = 0;
   }
+=======
+>>>>>>> Reuben_Compiles
 
   //easily change it for only reducing/increasing one side
 
@@ -656,6 +704,7 @@ void forwards(){
 }
 
 
+<<<<<<< HEAD
 void rotate()
 {
   //  always turn CW, note that gyro reads -90/270 when turning exactly 90 deg CW
@@ -672,6 +721,12 @@ void rotate()
     }
     scenario = 1; 
     rotations ++; 
+=======
+void rotate(){
+
+  if (rotations < 4) {
+            //rotate()            
+>>>>>>> Reuben_Compiles
   }
   else {
     scenario = 4;
@@ -679,6 +734,10 @@ void rotate()
 }
 
 
+<<<<<<< HEAD
+=======
+
+>>>>>>> Reuben_Compiles
 float Controller (int i) { //ye dude
 
   float output = 0;
@@ -696,9 +755,12 @@ float Controller (int i) { //ye dude
   else {
     output = 200.0; //saftey on x correction
   }
+<<<<<<< HEAD
 
   serial.print(i);
   serial.print(output);
+=======
+>>>>>>> Reuben_Compiles
   return output;
   
 }
