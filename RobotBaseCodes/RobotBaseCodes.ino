@@ -628,16 +628,27 @@ void forwards(){
 }
 
 
-void rotate(){
+void rotate()
+{
+  //  always turn CW, note that gyro reads -90/270 when turning exactly 90 deg CW
+  //  bot should be aligned already before rotating
+
+  float angle;
 
   if (rotations < 4) {
-            //rotate()            
+
+    if ( ( angle > -80 && angle <= 0 ) || ( angle < 260 && <= 360 ) )
+    {
+      cw();
+    }
+
+    alignLHS(); // for fine adjustment of rotation
+  
   }
   else {
     scenario = 4;
   }
 }
-
 
 
 float Controller (int i) { //ye dude
