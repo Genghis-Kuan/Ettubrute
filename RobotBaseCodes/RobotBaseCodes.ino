@@ -55,8 +55,36 @@ Servo right_font_motor;  // create servo object to control Vex Motor Controller 
 Servo turret_motor;
 
 
-int speed_val = 100;
-int speed_change;
+int speed_val = 0.0;
+float speed_change;
+
+
+
+//My globals
+
+float tru[] = {0, 0}; //true X then Y distnace
+float sensDist[] = {40, 40}; //distance between sensors X then Y
+
+
+//Controller
+float setP[] = {0, 150.0, 150.0}; //x1, 150mm, 150mm
+float cur[] = {0, 0, 0}; //x2, true X, true Y
+
+float kp[] = {10, 1, 1};//1 is largest gain - depedns on error size seen? set to 800m?? so 1*800 = 800 max value is 1000, need 200 for corretcing angle
+float ki[] = {0, 0, 0};
+
+float error[] = {setP[0]-cur[0], setP[1]-cur[1], setP[2]-cur[2]}; // 0 difference between x1 and x2, 1 differnce between true X and 150mm, 2 difference between true Y and 150mm
+float ierror[] = {0, 0, 0};
+
+
+
+int scenario = 1; //either alligning or 
+int rotations = 0;
+float cor_factor = 0; //correction factor in x direction
+
+//end of my variables
+
+
 
 //Serial Pointer
 HardwareSerial *SerialCom;
@@ -72,7 +100,7 @@ void setup(void)
   digitalWrite(TRIG_PIN, LOW);
 
   // Setup the Serial port and pointer, the pointer allows switching the debug info through the USB port(Serial) or Bluetooth port(Serial1) with ease.
-  SerialCom = &Serial1;
+  SerialCom = &Serial;
   SerialCom->begin(115200);
   SerialCom->println("MECHENG706_Base_Code_25/01/2018");
   delay(1000);
@@ -92,6 +120,29 @@ void loop(void) //main loop
       break;
     case RUNNING: //Lipo Battery Volage OK
       machine_state =  running();
+
+
+
+      //Code boi
+    
+      measure();      
+      
+      switch (scenario) {
+       case 1: //ALIGNING      
+          alignLHS();      
+          break;          
+        case 2: //OPERATING      
+          forward();
+          break;
+        case 3:
+          rotate();  
+          break;
+        case 4:
+          stop();
+      }
+
+      //end of my code
+      
       break;
     case STOPPED: //Stop of Lipo Battery voltage is too low, to protect Battery
       machine_state =  stopped();
@@ -114,14 +165,15 @@ STATE running() {
 
   static unsigned long previous_millis;
 
-  read_serial_command();
+  // read_serial_command();          //this is the line that allows wasd control
+  
   fast_flash_double_LED_builtin();
 
   if (millis() - previous_millis > 500) {  //Arduino style 500ms timed execution statement
     previous_millis = millis();
 
     SerialCom->println("RUNNING---------");
-    speed_change_smooth();
+    //speed_change_smooth();
     Analog_Range_A4();
 
 #ifndef NO_READ_GYRO
@@ -149,8 +201,15 @@ STATE running() {
     }
   }
 
+
+
   return RUNNING;
 }
+
+
+
+
+
 
 //Stop of Lipo Battery voltage is too low, to protect Battery
 STATE stopped() {
@@ -435,10 +494,10 @@ void stop() //Stop
 
 void forward()
 {
-  left_font_motor.writeMicroseconds(1500 + speed_val);
-  left_rear_motor.writeMicroseconds(1500 + speed_val);
-  right_rear_motor.writeMicroseconds(1500 - speed_val);
-  right_font_motor.writeMicroseconds(1500 - speed_val);
+  left_font_motor.writeMicroseconds(1500 + speed_val - cor_factor);
+  left_rear_motor.writeMicroseconds(1500 + speed_val - cor_factor);
+  right_rear_motor.writeMicroseconds(1500 - speed_val - cor_factor);
+  right_font_motor.writeMicroseconds(1500 - speed_val - cor_factor);
 }
 
 void reverse ()
@@ -479,4 +538,125 @@ void strafe_right ()
   left_rear_motor.writeMicroseconds(1500 - speed_val);
   right_rear_motor.writeMicroseconds(1500 - speed_val);
   right_font_motor.writeMicroseconds(1500 + speed_val);
+}
+
+
+
+
+//MY FUNCTIONS Boi
+
+void alignLHS () {
+
+  if (abs(error[0]) < 6)  { //check if the robot is parallel with the wall
+    if (abs(error[1]) < 6) { //check if the robot is 150mm away from it
+      scenario = 2;
+    }
+    else {
+      speed_val = Controller(1);
+      strafe_right(); //strafe left lol    
+    }
+  }
+  else {
+    speed_val = Controller(0);
+    ccw(); //or cw, the controller will output a positive or negative
+  }
+}
+
+
+void measure () {
+
+  int i = 0;
+  //tommmmm jskbdjknjksd
+
+  float x1;
+  float x2;
+  float y1;
+  float y2;
+  float sens[] = {x1, y1, x2, y2};
+
+  float theta[] = {};
+  float avg[] = {};
+  float dif[] = {error[0], y1-y2};
+
+
+  while (i < 2){
+    avg[i] = (sens[i] + sens[i+1])/2;
+
+     theta[i] = tan(sensDist[i]/dif[i]);
+
+     tru[i] = avg[i] * cos(theta[i]);
+     
+     i++;   
+  }
+  i = 0;
+}
+
+
+void forwards(){
+
+  if (tru[1] > 150) {
+  speed_val = Controller(2);
+  forward();
+  
+  if (abs(error[1]) > 6) {                //check if the robot is 150mm away from it
+    cor_factor = Controller(0);         //if x1 > x2 -> positive so needs to added on as a negative to robot
+  }
+
+  //easily change it for only reducing/increasing one side
+
+
+
+//   if abs(er[1]) > 6 { //check if the robot is 150mm away from it
+//      if er[0] > 0{ //x1 further away than x2 so rotate ccw
+//        //increase power on outside wheels
+//          //kp[1,2] + error*5?
+//        
+//        
+//      }
+//      else {
+//        //kp[3,4] + error*5?
+//      }
+//      
+//    
+//   }
+   //error is same for all its just the differing kp that changes due to x
+
+  }
+  else {
+    scenario = 3;
+  }  
+}
+
+
+void rotate(){
+
+  if (rotations < 4) {
+            //rotate()            
+  }
+  else {
+    scenario = 4;
+  }
+}
+
+
+
+float Controller (int i) { //ye dude
+
+  float output = 0;
+  
+  error[i] = setP[i] - cur[i]; 
+  ierror[i] = ierror[i] + error[i];
+  
+  output = kp[i] * error[i] + ki[i] * ierror[i];
+  
+  if (i > 0) {
+    if (abs(output) > 800) { //saftey for motors????  
+      output = 800.0;
+    }
+  }
+  else {
+    output = 200.0; //saftey on x correction
+  }
+  return output;
+  
 }
