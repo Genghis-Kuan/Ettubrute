@@ -46,7 +46,11 @@ const int ECHO_PIN = 49;
 
 // --------------------- OUR CODE -------------------------
 
-//set up 3 IR sensors, ultra sonic and gyro
+//set up IR sensors, ultra sonic and gyro
+//IR1 is Long range front left
+//IR2 is Long range front right
+//IR3 is Short range front 
+//IR4 is Short range rear
 
 int irSensor1 = A1;
 int ir1ADC;
@@ -79,7 +83,11 @@ float rotationThreshold = 1.5; // because of gyro drifting, defining rotation an
 float gyroRate = 0; // read out value of sensor in voltage
 float currentAngle = 0; // current angle calculated by angular velocity integral on
 
-//------------------------
+//-------UltraSonic Vars---------
+
+float mm = 0;
+
+
 // Anything over 400 cm (23200 us pulse) is "out of range". Hit:If you decrease to this the ranging sensor but the timeout is short, you may not need to read up to 4meters.
 const unsigned int MAX_DIST = 23200;
 
@@ -360,7 +368,7 @@ void HC_SR04_range()
   unsigned long t2;
   unsigned long pulse_width;
   float cm;
-  float inches;
+  float mm;
 
   // Hold the trigger pin high for at least 10 us
   digitalWrite(TRIG_PIN, HIGH);
@@ -398,8 +406,8 @@ void HC_SR04_range()
   // Calculate distance in centimeters and inches. The constants
   // are found in the datasheet, and calculated from the assumed speed
   //of sound in air at sea level (~340 m/s).
-  cm = pulse_width / 58.0;
-  inches = pulse_width / 148.0;
+  cm = pulse_width / 58.0 + 10.65; //10.65 is distance from centre of bot to edge of sensor
+  mm = cm * 10;
 
   // Print out results
   if ( pulse_width > MAX_DIST ) {
