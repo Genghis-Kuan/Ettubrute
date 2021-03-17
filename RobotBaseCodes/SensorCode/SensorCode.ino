@@ -145,28 +145,28 @@ void loop(void) //main loop
   ir1ADC = analogRead(irSensor1);
   Serial.print("IR Sensor 1 ADC: ");
   Serial.println(ir1ADC);
-  ir1val = 0 - pow(ir1ADC,4) * 0.00000003 + pow(ir1ADC,3) * 0.00004 - pow(ir1ADC,2) * 0.0227 + ir1ADC * 4.4086 + 94.356;
+  ir1val = 0 - pow(ir1ADC,3) * 0.000004 + pow(ir1ADC,2) * 0.0056 - ir1ADC * 2.9377 + 708.67;
   Serial.print("IR Sensor 1 distance: ");
   Serial.println(ir1val);
 
   ir2ADC = analogRead(irSensor2);
   Serial.print("IR Sensor 2 ADC: ");
   Serial.println(ir2ADC);
-  ir2val = 0 - pow(ir2ADC,4) * 0.00000002 + pow(ir2ADC,3) * 0.00004 - pow(ir2ADC,2) * 0.0221 + ir2ADC * 4.1068 + 158.4;
+  ir2val = 0 - pow(ir2ADC,3) * 0.000005 + pow(ir2ADC,2) * 0.0072 - ir2ADC * 3.7209 + 831.08;
   Serial.print("IR Sensor 2 distance: ");
   Serial.println(ir2val);
 
   ir3ADC = analogRead(irSensor3);
   Serial.print("IR Sensor 3 ADC: ");
   Serial.println(ir3ADC);
-  ir3val = 0 - pow(ir3ADC,3) * 0.000004 + pow(ir3ADC,2) * 0.0056 - ir3ADC * 2.4797 + 520.04;
+  ir3val = 0 - pow(ir3ADC,3) * 0.000005 + pow(ir3ADC,2) * 0.0072 - ir3ADC * 3.7209 + 831.08;
   Serial.print("IR Sensor 3 distance: ");
   Serial.println(ir3val);
 
   ir4ADC = analogRead(irSensor4);
   Serial.print("IR Sensor 4 ADC: ");
   Serial.println(ir4ADC);
-  ir4val = 0 - pow(ir4ADC,3) * 0.000003 + pow(ir4ADC,2) * 0.0041 - ir4ADC * 1.9213 + 449.67;
+  ir4val = 0 - pow(ir4ADC,3) * 0.000004 + pow(ir4ADC,2) * 0.0054 - ir4ADC * 2.4371 + 466.8;
   Serial.print("IR Sensor 4 distance: ");
   Serial.println(ir4val);
 
