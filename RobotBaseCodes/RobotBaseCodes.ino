@@ -48,6 +48,51 @@ const int ECHO_PIN = 49;
 // Anything over 400 cm (23200 us pulse) is "out of range". Hit:If you decrease to this the ranging sensor but the timeout is short, you may not need to read up to 4meters.
 const unsigned int MAX_DIST = 23200;
 
+
+// --------------------- OUR CODE -------------------------
+
+//set up IR sensors, ultra sonic and gyro
+//IR1 is Long range front left
+//IR2 is Long range front right
+//IR3 is Short range front 
+//IR4 is Short range rear
+
+float irSensor1 = A1;
+float ir1ADC;
+float ir1val;
+
+float irSensor2 = A2;
+float ir2ADC;
+float ir2val;
+
+float irSensor3 = A3;
+float ir3ADC;
+float ir3val;
+
+float irSensor4 = A4;
+float ir4ADC;
+float ir4val;
+
+
+//------------- Gyro variables----------------------------
+
+int gyroSensor = A5;
+float T = millis();
+byte serialRead = 0;
+int gyroSignalADC = 0;
+float gyroSupplyVoltage = 5;
+
+float gyroZeroVoltage = 0; // the value of voltage when gyro is zero
+float gyroSensitivity = 0.007; // gyro sensitivity unit is (mv/degree/second) get from datasheet
+float rotationThreshold = 1.5; // because of gyro drifting, defining rotation angular velocity less than this value will be ignored
+float gyroRate = 0; // read out value of sensor in voltage
+float currentAngle = 0; // current angle calculated by angular velocity integral on
+
+//-------UltraSonic Vars---------
+
+float mm = 0;
+
+
 Servo left_font_motor;  // create servo object to control Vex Motor Controller 29
 Servo left_rear_motor;  // create servo object to control Vex Motor Controller 29
 Servo right_rear_motor;  // create servo object to control Vex Motor Controller 29
@@ -63,36 +108,21 @@ float speed_change;
 //My globals
 
 float tru[] = {0, 0}; //true X then Y distnace
-<<<<<<< HEAD
 float Y = 0; //from ultrasonic
 float sensDist[] = {83.1, 103.64}; //distance between sensors X then Y
-=======
-float sensDist[] = {40, 40}; //distance between sensors X then Y
->>>>>>> Reuben_Compiles
 
 
 //Controller
 float setP[] = {0, 150.0, 150.0}; //x1, 150mm, 150mm
-<<<<<<< HEAD
 float cur[] = {0, tru[0], Y}; //x2, true X, true Y
-=======
-float cur[] = {0, 0, 0}; //x2, true X, true Y
->>>>>>> Reuben_Compiles
 
-float kp[] = {10, 1, 1};//1 is largest gain - depedns on error size seen? set to 800m?? so 1*800 = 800 max value is 1000, need 200 for corretcing angle
+float kp[] = {10, 2, 1};//1 is largest gain - depedns on error size seen? set to 800m?? so 1*800 = 800 max value is 1000, need 200 for corretcing angle
 float ki[] = {0, 0, 0};
 
-<<<<<<< HEAD
 float error[] = {0, 0, 0}; // 0 difference between x1 and x2, 1 differnce between true X and 150mm, 2 difference between true Y and 150mm
 float ierror[] = {0, 0, 0};
 
 int angle[] = {285, 195, 105}; 
-=======
-float error[] = {setP[0]-cur[0], setP[1]-cur[1], setP[2]-cur[2]}; // 0 difference between x1 and x2, 1 differnce between true X and 150mm, 2 difference between true Y and 150mm
-float ierror[] = {0, 0, 0};
-
-
->>>>>>> Reuben_Compiles
 
 int scenario = 1; //either alligning or 
 int rotations = 0;
@@ -100,7 +130,16 @@ float cor_factor = 0; //correction factor in x direction
 
 //end of my variables
 
+//setup tom
 
+//Setup gyro
+  float sum = 0;
+  //Serial.println("please keep the sensor still for calibration");
+  //Serial.println("get the gyro zero voltage");
+
+
+
+//end of setup and codeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee
 
 //Serial Pointer
 HardwareSerial *SerialCom;
@@ -135,24 +174,22 @@ void loop(void) //main loop
       machine_state = initialising();
       break;
     case RUNNING: //Lipo Battery Volage OK
-<<<<<<< HEAD
-     // machine_state =  running();
+     // machine_state =  running();        //should work without?
 
-
-      serial.print(scenario);
+      Serial.print("scenario: ");
+      Serial.println(scenario);
       
       //Code boi
 
      //read_serial_command();
-=======
-      machine_state =  running();
-
-
-
-      //Code boi
->>>>>>> Reuben_Compiles
     
-      measure();      
+      measure();    
+      error[0] = setP[0]-cur[0];
+      error[1] = setP[1]-cur[1];
+      error[2] = setP[2]-cur[2];
+      
+      //Serial.print("scenario: ");
+      //Serial.println(scenario);
       
       switch (scenario) {
        case 1: //ALIGNING      
@@ -161,17 +198,10 @@ void loop(void) //main loop
         case 2: //OPERATING      
           forward();
           break;
-<<<<<<< HEAD
         case 3: //Rotating
           rotate();  
           break;
         case 4: //stop everything
-=======
-        case 3:
-          rotate();  
-          break;
-        case 4:
->>>>>>> Reuben_Compiles
           stop();
       }
 
@@ -368,7 +398,7 @@ void HC_SR04_range()
   unsigned long t2;
   unsigned long pulse_width;
   float cm;
-  float inches;
+  float mm;
 
   // Hold the trigger pin high for at least 10 us
   digitalWrite(TRIG_PIN, HIGH);
@@ -406,8 +436,8 @@ void HC_SR04_range()
   // Calculate distance in centimeters and inches. The constants
   // are found in the datasheet, and calculated from the assumed speed
   //of sound in air at sea level (~340 m/s).
-  cm = pulse_width / 58.0;
-  inches = pulse_width / 148.0;
+  cm = pulse_width / 58.0 + 10.65; //10.65 is distance from centre of bot to edge of sensor
+  mm = cm * 10;
 
   // Print out results
   if ( pulse_width > MAX_DIST ) {
@@ -581,6 +611,12 @@ void strafe_right ()
 
 void alignLHS () {
 
+  Serial.print("error");
+  Serial.println(error[0]);
+  Serial.println(error[1]);
+  Serial.println(error[2]);
+  
+
   if (abs(error[0]) < 6)  { //check if the robot is parallel with the wall
     if (abs(error[1]) < 6) { //check if the robot is 150mm away from it
       scenario = 2;
@@ -592,56 +628,62 @@ void alignLHS () {
   }
   else {
     speed_val = Controller(0);
+    Serial.print("speed ");
+    Serial.println(speed_val);
     ccw(); //or cw, the controller will output a positive or negative
   }
-<<<<<<< HEAD
 
-  //gyro = 0;
+  gyroSet();
   
-=======
->>>>>>> Reuben_Compiles
 }
 
 
 void measure () {
 
   int i = 0;
-  //tommmmm jskbdjknjksd
-
-<<<<<<< HEAD
-  //angle boi
-=======
->>>>>>> Reuben_Compiles
-  float x1;
-  float x2;
-  float y1;
-  float y2;
-<<<<<<< HEAD
-
   
-=======
->>>>>>> Reuben_Compiles
-  float sens[] = {x1, y1, x2, y2};
+  float sens[] = {ir3val, ir1val, ir4val, ir2val}; //x1,y1,x2,y2
 
   float theta[] = {};
   float avg[] = {};
-  float dif[] = {error[0], y1-y2};
+  float dif[] = {error[0], ir1val-ir2val};
 
-<<<<<<< HEAD
-  //read everything?
 
-  //angle = gyro boi
 
-  //Y = Ultrasonic reading
+  ir1ADC = analogRead(irSensor1);
+  Serial.print("IR Sensor 1 ADC: ");
+  Serial.println(ir1ADC);
+  ir1val = 0 - pow(ir1ADC,3) * 0.000004 + pow(ir1ADC,2) * 0.0056 - ir1ADC * 2.9377 + 708.67;
+  Serial.print("IR Sensor 1 distance: ");
+  Serial.println(ir1val);
 
-  //float avg = (x1+x2)/2;
-  
-//  theta = tan(sensDist[0]/(x1-x2));
-//  tru[0] = avg * cos(theta);
-//  tru[1] = avg * cos(theta);
-//  Y = avg *cos(theta);
-=======
->>>>>>> Reuben_Compiles
+  ir2ADC = analogRead(irSensor2 );
+  Serial.print("IR Sensor 2 ADC: ");
+  Serial.println(ir2ADC);
+  ir2val = 0 - pow(ir2ADC,3) * 0.000005 + pow(ir2ADC,2) * 0.0072 - ir2ADC * 3.7209 + 831.08;
+  Serial.print("IR Sensor 2 distance: ");
+  Serial.println(ir2val);
+
+  ir3ADC = analogRead(irSensor3);
+  Serial.print("IR Sensor 3 ADC: ");
+  Serial.println(ir3ADC);
+  ir3val = 0 - pow(ir3ADC,3) * 0.000005 + pow(ir3ADC,2) * 0.0072 - ir3ADC * 3.7209 + 831.08;
+  Serial.print("IR Sensor 3 distance: ");
+  Serial.println(ir3val);
+
+  ir4ADC = analogRead(irSensor4);
+ Serial.print("IR Sensor 4 ADC: ");
+  Serial.println(ir4ADC);
+  ir4val = 0 - pow(ir4ADC,3) * 0.000004 + pow(ir4ADC,2) * 0.0054 - ir4ADC * 2.4371 + 466.8;
+ Serial.print("IR Sensor 4 distance: ");
+ Serial.println(ir4val);
+
+  HC_SR04_range();
+  readGyro();
+
+  //Serial.print("please");
+  //Serial.println(sens[0]);
+
 
   while (i < 2){
     avg[i] = (sens[i] + sens[i+1])/2;
@@ -653,12 +695,15 @@ void measure () {
      i++;   
   }
   i = 0;
-<<<<<<< HEAD
 
+  Serial.print("tru");
+  Serial.println(tru[0]);
 
-  Y = Y * cos(theta[1]); //for the ultrasonics sensor
-=======
->>>>>>> Reuben_Compiles
+  setP[0] = sens[0];
+  cur[0] = sens[2];
+  cur[1] = tru[0];
+  cur[2] = tru[1];
+  Y = mm * cos(theta[1]); //for the ultrasonics sensor
 }
 
 
@@ -671,12 +716,9 @@ void forwards(){
   if (abs(error[1]) > 6) {                //check if the robot is 150mm away from it
     cor_factor = Controller(0);         //if x1 > x2 -> positive so needs to added on as a negative to robot
   }
-<<<<<<< HEAD
   else {
     ierror[0,1,2] = 0;
   }
-=======
->>>>>>> Reuben_Compiles
 
   //easily change it for only reducing/increasing one side
 
@@ -704,7 +746,6 @@ void forwards(){
 }
 
 
-<<<<<<< HEAD
 void rotate()
 {
   //  always turn CW, note that gyro reads -90/270 when turning exactly 90 deg CW
@@ -721,12 +762,6 @@ void rotate()
     }
     scenario = 1; 
     rotations ++; 
-=======
-void rotate(){
-
-  if (rotations < 4) {
-            //rotate()            
->>>>>>> Reuben_Compiles
   }
   else {
     scenario = 4;
@@ -734,10 +769,6 @@ void rotate(){
 }
 
 
-<<<<<<< HEAD
-=======
-
->>>>>>> Reuben_Compiles
 float Controller (int i) { //ye dude
 
   float output = 0;
@@ -755,12 +786,63 @@ float Controller (int i) { //ye dude
   else {
     output = 200.0; //saftey on x correction
   }
-<<<<<<< HEAD
 
-  serial.print(i);
-  serial.print(output);
-=======
->>>>>>> Reuben_Compiles
+  Serial.print(i);
+  Serial.print(output);
   return output;
   
+}
+
+
+void readGyro() { //tom
+  gyroRate = (analogRead(gyroSensor) * gyroSupplyVoltage) / 1023;
+
+  // find the voltage offset the value of voltage when gyro is zero (still)
+  gyroRate -= (gyroZeroVoltage / 1023 * gyroSupplyVoltage);
+  // read out voltage divided the gyro sensitivity to calculate the angular velocity
+  float angularVelocity = gyroRate / gyroSensitivity; // from Data Sheet, gyroSensitivity is 0.007 V/dps
+
+  // if the angular velocity is less than the threshold, ignore it
+
+  if (angularVelocity >= rotationThreshold || angularVelocity <= -rotationThreshold) {
+    // we are running a loop in T (of T/1000 second).
+    T = millis() - T;
+    float angleChange = angularVelocity / (1000 / T);
+    T = millis();
+    currentAngle += angleChange;
+  }
+
+  // keep the angle between 0-360
+
+
+  if (currentAngle < 0)
+  {
+    currentAngle += 360;
+  }
+  else if (currentAngle > 359)
+  {
+    currentAngle -= 360;
+  }
+
+  Serial.print(angularVelocity);
+  Serial.print(" ");
+  Serial.println(currentAngle);
+}
+
+
+
+//gyro zero
+
+void gyroSet (){
+  for (int i = 0; i < 100; i++) // read 100 values of voltage when gyro is at still, to calculate the zero-drift.
+  {
+    gyroSignalADC = analogRead(gyroSensor);
+    sum += gyroSignalADC;
+    delay(5);
+  }
+  gyroZeroVoltage = sum / 100; // average the sum as the zero drifting
+
+
+  //delay(1000); //settling time but no really needed
+
 }
