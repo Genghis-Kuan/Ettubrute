@@ -46,7 +46,11 @@ const int ECHO_PIN = 49;
 
 // --------------------- OUR CODE -------------------------
 
-//set up 3 IR sensors, ultra sonic and gyro
+//set up IR sensors, ultra sonic and gyro
+//IR1 is Long range front left
+//IR2 is Long range front right
+//IR3 is Short range front 
+//IR4 is Short range rear
 
 int irSensor1 = A1;
 int ir1ADC;
@@ -79,7 +83,11 @@ float rotationThreshold = 1.5; // because of gyro drifting, defining rotation an
 float gyroRate = 0; // read out value of sensor in voltage
 float currentAngle = 0; // current angle calculated by angular velocity integral on
 
-//------------------------
+//-------UltraSonic Vars---------
+
+float mm = 0;
+
+
 // Anything over 400 cm (23200 us pulse) is "out of range". Hit:If you decrease to this the ranging sensor but the timeout is short, you may not need to read up to 4meters.
 const unsigned int MAX_DIST = 23200;
 
@@ -137,28 +145,28 @@ void loop(void) //main loop
   ir1ADC = analogRead(irSensor1);
   Serial.print("IR Sensor 1 ADC: ");
   Serial.println(ir1ADC);
-  ir1val = 0 - pow(ir1ADC,4) * 0.00000003 + pow(ir1ADC,3) * 0.00004 - pow(ir1ADC,2) * 0.0227 + ir1ADC * 4.4086 + 94.356;
+  ir1val = 0 - pow(ir1ADC,3) * 0.000004 + pow(ir1ADC,2) * 0.0056 - ir1ADC * 2.9377 + 708.67;
   Serial.print("IR Sensor 1 distance: ");
   Serial.println(ir1val);
 
   ir2ADC = analogRead(irSensor2);
   Serial.print("IR Sensor 2 ADC: ");
   Serial.println(ir2ADC);
-  ir2val = 0 - pow(ir2ADC,4) * 0.00000002 + pow(ir2ADC,3) * 0.00004 - pow(ir2ADC,2) * 0.0221 + ir2ADC * 4.1068 + 158.4;
+  ir2val = 0 - pow(ir2ADC,3) * 0.000005 + pow(ir2ADC,2) * 0.0072 - ir2ADC * 3.7209 + 831.08;
   Serial.print("IR Sensor 2 distance: ");
   Serial.println(ir2val);
 
   ir3ADC = analogRead(irSensor3);
   Serial.print("IR Sensor 3 ADC: ");
   Serial.println(ir3ADC);
-  ir3val = 0 - pow(ir3ADC,3) * 0.000004 + pow(ir3ADC,2) * 0.0056 - ir3ADC * 2.4797 + 520.04;
+  ir3val = 0 - pow(ir3ADC,3) * 0.000004 + pow(ir3ADC,2) * 0.0054 - ir3ADC * 2.4371 + 466.8;
   Serial.print("IR Sensor 3 distance: ");
   Serial.println(ir3val);
 
   ir4ADC = analogRead(irSensor4);
   Serial.print("IR Sensor 4 ADC: ");
   Serial.println(ir4ADC);
-  ir4val = 0 - pow(ir4ADC,3) * 0.000003 + pow(ir4ADC,2) * 0.0041 - ir4ADC * 1.9213 + 449.67;
+  ir4val = 0 - pow(ir4ADC,3) * 0.000003 + pow(ir4ADC,2) * 0.0043 - ir4ADC * 1.9775 + 404.3;
   Serial.print("IR Sensor 4 distance: ");
   Serial.println(ir4val);
 
@@ -360,7 +368,7 @@ void HC_SR04_range()
   unsigned long t2;
   unsigned long pulse_width;
   float cm;
-  float inches;
+  float mm;
 
   // Hold the trigger pin high for at least 10 us
   digitalWrite(TRIG_PIN, HIGH);
@@ -398,8 +406,8 @@ void HC_SR04_range()
   // Calculate distance in centimeters and inches. The constants
   // are found in the datasheet, and calculated from the assumed speed
   //of sound in air at sea level (~340 m/s).
-  cm = pulse_width / 58.0;
-  inches = pulse_width / 148.0;
+  cm = pulse_width / 58.0 + 10.65; //10.65 is distance from centre of bot to edge of sensor
+  mm = cm * 10;
 
   // Print out results
   if ( pulse_width > MAX_DIST ) {
