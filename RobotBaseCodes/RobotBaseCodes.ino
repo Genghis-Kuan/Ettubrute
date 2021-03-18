@@ -48,8 +48,27 @@ const int ECHO_PIN = 49;
 // Anything over 400 cm (23200 us pulse) is "out of range". Hit:If you decrease to this the ranging sensor but the timeout is short, you may not need to read up to 4meters.
 const unsigned int MAX_DIST = 23200;
 
+Servo left_font_motor;  // create servo object to control Vex Motor Controller 29
+Servo left_rear_motor;  // create servo object to control Vex Motor Controller 29
+Servo right_rear_motor;  // create servo object to control Vex Motor Controller 29
+Servo right_font_motor;  // create servo object to control Vex Motor Controller 29
+Servo turret_motor;
+
+
+float speed_val = 0;
+float speed_change;
 
 // --------------------- OUR CODE -------------------------
+
+float error = 0;
+float integral = 0;
+float power = 0;
+float u = 0;
+
+int count = 0;
+int end = 0;
+
+
 
 //set up IR sensors, ultra sonic and gyro
 //IR1 is Long range front left
@@ -73,6 +92,11 @@ float irSensor4 = A4;
 float ir4ADC;
 float ir4val;
 
+float  fl = 0; //setup modifers
+float  fr = 0;
+float  lf = 0;
+float  lr = 0;
+
 
 //------------- Gyro variables----------------------------
 
@@ -92,54 +116,22 @@ float currentAngle = 0; // current angle calculated by angular velocity integral
 
 float mm = 0;
 
-
-Servo left_font_motor;  // create servo object to control Vex Motor Controller 29
-Servo left_rear_motor;  // create servo object to control Vex Motor Controller 29
-Servo right_rear_motor;  // create servo object to control Vex Motor Controller 29
-Servo right_font_motor;  // create servo object to control Vex Motor Controller 29
-Servo turret_motor;
-
-
-int speed_val = 0.0;
-float speed_change;
-
-
-
 //My globals
-
-float tru[] = {0, 0}; //true X then Y distnace
 float Y = 0; //from ultrasonic
-float sensDist[] = {83.1, 103.64}; //distance between sensors X then Y
-
-
-//Controller
-float setP[] = {0, 150.0, 150.0}; //x1, 150mm, 150mm
-float cur[] = {0, tru[0], Y}; //x2, true X, true Y
-
-float kp[] = {10, 2, 1};//1 is largest gain - depedns on error size seen? set to 800m?? so 1*800 = 800 max value is 1000, need 200 for corretcing angle
-float ki[] = {0, 0, 0};
-
-float error[] = {0, 0, 0}; // 0 difference between x1 and x2, 1 differnce between true X and 150mm, 2 difference between true Y and 150mm
-float ierror[] = {0, 0, 0};
+//float sensDist[] = {83.1, 103.64}; //distance between sensors X then Y
 
 int angle[] = {285, 195, 105}; 
 
 int scenario = 1; //either alligning or 
 int rotations = 0;
-float cor_factor = 0; //correction factor in x direction
 
-//end of my variables
-
-//setup tom
 
 //Setup gyro
   float sum = 0;
-  //Serial.println("please keep the sensor still for calibration");
-  //Serial.println("get the gyro zero voltage");
+
+//end of our code
 
 
-
-//end of setup and codeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee
 
 //Serial Pointer
 HardwareSerial *SerialCom;
@@ -174,39 +166,7 @@ void loop(void) //main loop
       machine_state = initialising();
       break;
     case RUNNING: //Lipo Battery Volage OK
-     // machine_state =  running();        //should work without?
-
-      Serial.print("scenario: ");
-      Serial.println(scenario);
-      
-      //Code boi
-
-     //read_serial_command();
-    
-      measure();    
-      error[0] = setP[0]-cur[0];
-      error[1] = setP[1]-cur[1];
-      error[2] = setP[2]-cur[2];
-      
-      //Serial.print("scenario: ");
-      //Serial.println(scenario);
-      
-      switch (scenario) {
-       case 1: //ALIGNING      
-          alignLHS();      
-          break;          
-        case 2: //OPERATING      
-          forward();
-          break;
-        case 3: //Rotating
-          rotate();  
-          break;
-        case 4: //stop everything
-          stop();
-      }
-
-      //end of my code
-      
+      machine_state =  running();             
       break;
     case STOPPED: //Stop of Lipo Battery voltage is too low, to protect Battery
       machine_state =  stopped();
@@ -226,44 +186,52 @@ STATE initialising() {
 }
 
 STATE running() {
-
-  static unsigned long previous_millis;
-
-  // read_serial_command();          //this is the line that allows wasd control
   
-  fast_flash_double_LED_builtin();
-
-  if (millis() - previous_millis > 500) {  //Arduino style 500ms timed execution statement
-    previous_millis = millis();
-
-    SerialCom->println("RUNNING---------");
-    //speed_change_smooth();
-    Analog_Range_A4();
-
-#ifndef NO_READ_GYRO
-    GYRO_reading();
-#endif
-
-#ifndef NO_HC-SR04
-    HC_SR04_range();
-#endif
+  fast_flash_double_LED_builtin(); //theirs
 
 #ifndef NO_BATTERY_V_OK
     if (!is_battery_voltage_OK()) return STOPPED;
 #endif
 
 
-    turret_motor.write(pos);
 
-    if (pos == 0)
-    {
-      pos = 45;
-    }
-    else
-    {
-      pos = 0;
-    }
-  }
+    //Code boi
+    Serial.print("scenario: ");
+    Serial.println(scenario);      
+    
+//   if (SerialCom->available()) {    //the code that allows us to start/stop from laptop
+//    char val = SerialCom->read();
+//
+//    //Perform an action depending on the command
+//    switch (val) {
+//      case 'b'://Move Forward
+//      case 'B':
+//        forward ();
+//        SerialCom->println("Forward");
+          
+          
+      switch (scenario) {
+       case 1: //ALIGNING      
+          home(3, 0.2, 3, 0.2);      
+          break;          
+        case 2: //OPERATING      
+          drive(5, 0.2, 5);
+          break;
+        case 3: //Rotating
+          rotate(3, 0.2);  
+          break;
+        case 4: //stop everything       //remove if using pc comands
+          stop();
+      }
+
+
+//      break;        //the code that allows us to start/stop from laptop
+//    default:
+//      stop();
+//      SerialCom->println("stop");
+//      break;
+//  }
+      //end of my code
 
 
 
@@ -398,7 +366,7 @@ void HC_SR04_range()
   unsigned long t2;
   unsigned long pulse_width;
   float cm;
-  float mm;
+  
 
   // Hold the trigger pin high for at least 10 us
   digitalWrite(TRIG_PIN, HIGH);
@@ -464,66 +432,6 @@ void GYRO_reading()
 }
 #endif
 
-//Serial command pasing
-void read_serial_command()
-{
-  if (SerialCom->available()) {
-    char val = SerialCom->read();
-    SerialCom->print("Speed:");
-    SerialCom->print(speed_val);
-    SerialCom->print(" ms ");
-
-    //Perform an action depending on the command
-    switch (val) {
-      case 'w'://Move Forward
-      case 'W':
-        forward ();
-        SerialCom->println("Forward");
-        break;
-      case 's'://Move Backwards
-      case 'S':
-        reverse ();
-        SerialCom->println("Backwards");
-        break;
-      case 'q'://Turn Left
-      case 'Q':
-        strafe_left();
-        SerialCom->println("Strafe Left");
-        break;
-      case 'e'://Turn Right
-      case 'E':
-        strafe_right();
-        SerialCom->println("Strafe Right");
-        break;
-      case 'a'://Turn Right
-      case 'A':
-        ccw();
-        SerialCom->println("ccw");
-        break;
-      case 'd'://Turn Right
-      case 'D':
-        cw();
-        SerialCom->println("cw");
-        break;
-      case '-'://Turn Right
-      case '_':
-        speed_change = -100;
-        SerialCom->println("-100");
-        break;
-      case '=':
-      case '+':
-        speed_change = 100;
-        SerialCom->println("+");
-        break;
-      default:
-        stop();
-        SerialCom->println("stop");
-        break;
-    }
-
-  }
-
-}
 
 //----------------------Motor moments------------------------
 //The Vex Motor Controller 29 use Servo Control signals to determine speed and direction, with 0 degrees meaning neutral https://en.wikipedia.org/wiki/Servo_control
@@ -556,241 +464,193 @@ void stop() //Stop
   right_font_motor.writeMicroseconds(1500);
 }
 
-void forward()
-{
-  left_font_motor.writeMicroseconds(1500 + speed_val - cor_factor);
-  left_rear_motor.writeMicroseconds(1500 + speed_val - cor_factor);
-  right_rear_motor.writeMicroseconds(1500 - speed_val - cor_factor);
-  right_font_motor.writeMicroseconds(1500 - speed_val - cor_factor);
-}
-
-void reverse ()
-{
-  left_font_motor.writeMicroseconds(1500 - speed_val);
-  left_rear_motor.writeMicroseconds(1500 - speed_val);
-  right_rear_motor.writeMicroseconds(1500 + speed_val);
-  right_font_motor.writeMicroseconds(1500 + speed_val);
-}
-
-void ccw ()
-{
-  left_font_motor.writeMicroseconds(1500 - speed_val);
-  left_rear_motor.writeMicroseconds(1500 - speed_val);
-  right_rear_motor.writeMicroseconds(1500 - speed_val);
-  right_font_motor.writeMicroseconds(1500 - speed_val);
-}
-
-void cw ()
-{
-  left_font_motor.writeMicroseconds(1500 + speed_val);
-  left_rear_motor.writeMicroseconds(1500 + speed_val);
-  right_rear_motor.writeMicroseconds(1500 + speed_val);
-  right_font_motor.writeMicroseconds(1500 + speed_val);
-}
-
-void strafe_left ()
-{
-  left_font_motor.writeMicroseconds(1500 - speed_val);
-  left_rear_motor.writeMicroseconds(1500 + speed_val);
-  right_rear_motor.writeMicroseconds(1500 + speed_val);
-  right_font_motor.writeMicroseconds(1500 - speed_val);
-}
-
-void strafe_right ()
-{
-  left_font_motor.writeMicroseconds(1500 + speed_val);
-  left_rear_motor.writeMicroseconds(1500 - speed_val);
-  right_rear_motor.writeMicroseconds(1500 - speed_val);
-  right_font_motor.writeMicroseconds(1500 + speed_val);
-}
-
-
-
 
 //MY FUNCTIONS Boi
 
-void alignLHS () {
+void home(float kpRotate, float kiRotate, float kpStrafe, float kiStrafe) {
 
-  Serial.print("error");
-  Serial.println(error[0]);
-  Serial.println(error[1]);
-  Serial.println(error[2]);
+count = 0;
+error = 0;
+end = 0;
+
+ do { //rotate
+
+   measure();
+
+   error = fl - fr;
+   power = controller(error, kpRotate, kiRotate);
+
+   left_font_motor.writeMicroseconds(1500 + power); //kinematics would fix this?
+   left_rear_motor.writeMicroseconds(1500 + power);
+   right_rear_motor.writeMicroseconds(1500 + power);
+   right_font_motor.writeMicroseconds(1500 + power);
+
+   end = endCondition(error, end, 6); //accounts for overshoot endCondition(error, end, tol);
   
+ } while (end < 15);
 
-  if (abs(error[0]) < 6)  { //check if the robot is parallel with the wall
-    if (abs(error[1]) < 6) { //check if the robot is 150mm away from it
-      scenario = 2;
-    }
-    else {
-      speed_val = Controller(1);
-      strafe_right(); //strafe left lol    
-    }
+gyroSet(); //set up
+
+count = 0;
+error = 0;
+end = 0;
+
+   do { //strafe
+  
+     measure();
+  
+     error = 150 - fl;
+     power = controller(error, kpStrafe, kiStrafe);
+  
+    left_font_motor.writeMicroseconds(1500 + power); //kinematics would fix this?
+    left_rear_motor.writeMicroseconds(1500 - power);
+    right_rear_motor.writeMicroseconds(1500 - power);
+    right_font_motor.writeMicroseconds(1500 + power);
+  
+     end = endCondition(error, end, 6); //accounts for overshoot
+    
+   } while (end < 15);
+
+   scenario = 2;
+}
+
+
+void drive(float kpY, float kiY, float kpX){
+
+float xerror = 0;
+float dX = 0;  
+count = 0;
+error = 0;
+end = 0;
+
+   do { //forwards
+  
+     measure();
+  
+     error = 150 - fl;
+     power = controller(error, kpY, kiY);
+
+     xerror = fl - fr; //keeping it straight
+     dX = kpX * xerror;
+  
+    left_font_motor.writeMicroseconds(1500 + power + dX); //kinematics would fix this?
+    left_rear_motor.writeMicroseconds(1500 + power + dX);
+    right_rear_motor.writeMicroseconds(1500 - power + dX);
+    right_font_motor.writeMicroseconds(1500 - power + dX);
+  
+     end = endCondition(error, end, 6); //accounts for overshoot
+    
+   } while (end < 15);
+
+   scenario = 3;
+}
+
+
+void rotate(float kp, float ki){
+
+count = 0;
+error = 0;
+end = 0;
+
+ do { //rotate
+
+   measure();
+
+   error = 270 - currentAngle;
+   power = controller(error, kp, ki);
+
+   left_font_motor.writeMicroseconds(1500 + power); //kinematics would fix this?
+   left_rear_motor.writeMicroseconds(1500 + power);
+   right_rear_motor.writeMicroseconds(1500 + power);
+   right_font_motor.writeMicroseconds(1500 + power);
+
+   end = endCondition(error, end, 6); //accounts for overshoot endCondition(error, end, tol);
+  
+ } while (end < 15);
+
+gyroSet(); //set up
+
+  scenario = 2;
+  rotations = rotations + 1;
+}
+
+
+
+//Helper functions
+
+float controller(float error, float kp, float ki){
+
+  if (error > 30){   //stops integral affecting power till small error
+    integral = 0;
+  }
+  
+  integral = integral + error;
+  u = kp * error + ki * integral; 
+  
+  power = constrain(u, -500, 500); //motor saftey
+
+  if (count > 10){ //ramp
+    count = 10;
+  }
+  
+  power = (power * (0.1 * count)); //increases power
+  count = count + 1;
+
+  return power;
+}
+
+
+float endCondition(float error, int count, int tolerance) { //accounts for overshoot and ensures setpoint is reached
+
+  if (abs(error) <= tolerance) {
+    count = count + 1;
   }
   else {
-    speed_val = Controller(0);
-    Serial.print("speed ");
-    Serial.println(speed_val);
-    ccw(); //or cw, the controller will output a positive or negative
+    count = 0;
   }
-
-  gyroSet();
-  
+  return count;
 }
 
 
 void measure () {
 
-  int i = 0;
-  
-  float sens[] = {ir3val, ir1val, ir4val, ir2val}; //x1,y1,x2,y2
-
-  float theta[] = {};
-  float avg[] = {};
-  float dif[] = {error[0], ir1val-ir2val};
-
-
-
-  ir1ADC = analogRead(irSensor1);
+ ir1ADC = analogRead(irSensor1);
   Serial.print("IR Sensor 1 ADC: ");
   Serial.println(ir1ADC);
-  ir1val = 0 - pow(ir1ADC,3) * 0.000004 + pow(ir1ADC,2) * 0.0056 - ir1ADC * 2.9377 + 708.67;
+  ir1val = 0 - pow(ir1ADC, 3) * 0.000004 + pow(ir1ADC, 2) * 0.0056 - ir1ADC * 2.9377 + 708.67;
   Serial.print("IR Sensor 1 distance: ");
   Serial.println(ir1val);
 
   ir2ADC = analogRead(irSensor2 );
   Serial.print("IR Sensor 2 ADC: ");
   Serial.println(ir2ADC);
-  ir2val = 0 - pow(ir2ADC,3) * 0.000005 + pow(ir2ADC,2) * 0.0072 - ir2ADC * 3.7209 + 831.08;
+  ir2val = 0 - pow(ir2ADC, 3) * 0.000005 + pow(ir2ADC, 2) * 0.0072 - ir2ADC * 3.7209 + 831.08;
   Serial.print("IR Sensor 2 distance: ");
   Serial.println(ir2val);
 
   ir3ADC = analogRead(irSensor3);
   Serial.print("IR Sensor 3 ADC: ");
   Serial.println(ir3ADC);
-  ir3val = 0 - pow(ir3ADC,3) * 0.000005 + pow(ir3ADC,2) * 0.0072 - ir3ADC * 3.7209 + 831.08;
+  ir3val = 0 - pow(ir3ADC, 3) * 0.000004 + pow(ir3ADC, 2) * 0.0054 - ir3ADC * 2.4371 + 466.8;
   Serial.print("IR Sensor 3 distance: ");
   Serial.println(ir3val);
 
   ir4ADC = analogRead(irSensor4);
- Serial.print("IR Sensor 4 ADC: ");
+  Serial.print("IR Sensor 4 ADC: ");
   Serial.println(ir4ADC);
-  ir4val = 0 - pow(ir4ADC,3) * 0.000004 + pow(ir4ADC,2) * 0.0054 - ir4ADC * 2.4371 + 466.8;
- Serial.print("IR Sensor 4 distance: ");
- Serial.println(ir4val);
+  ir4val = 0 - pow(ir4ADC, 3) * 0.000003 + pow(ir4ADC, 2) * 0.0043 - ir4ADC * 1.9775 + 404.3;
+  Serial.print("IR Sensor 4 distance: ");
+  Serial.println(ir4val);
 
-  HC_SR04_range();
-  readGyro();
+  HC_SR04_range(); //caluclating distance ultra
+  readGyro(); //calculating rotation
 
-  //Serial.print("please");
-  //Serial.println(sens[0]);
-
-
-  while (i < 2){
-    avg[i] = (sens[i] + sens[i+1])/2;
-
-     theta[i] = tan(sensDist[i]/dif[i]);
-
-     tru[i] = avg[i] * cos(theta[i]);
-     
-     i++;   
-  }
-  i = 0;
-
-  Serial.print("tru");
-  Serial.println(tru[0]);
-
-  setP[0] = sens[0];
-  cur[0] = sens[2];
-  cur[1] = tru[0];
-  cur[2] = tru[1];
-  Y = mm * cos(theta[1]); //for the ultrasonics sensor
-}
-
-
-void forwards(){
-
-  if (tru[1] > 150) {
-  speed_val = Controller(2);
-  forward();
+  fl = ir1val; //setting sensors
+  fr = ir2val;
+  lf = ir3val;
+  lr = ir4val;
   
-  if (abs(error[1]) > 6) {                //check if the robot is 150mm away from it
-    cor_factor = Controller(0);         //if x1 > x2 -> positive so needs to added on as a negative to robot
-  }
-  else {
-    ierror[0,1,2] = 0;
-  }
-
-  //easily change it for only reducing/increasing one side
-
-
-
-//   if abs(er[1]) > 6 { //check if the robot is 150mm away from it
-//      if er[0] > 0{ //x1 further away than x2 so rotate ccw
-//        //increase power on outside wheels
-//          //kp[1,2] + error*5?
-//        
-//        
-//      }
-//      else {
-//        //kp[3,4] + error*5?
-//      }
-//      
-//    
-//   }
-   //error is same for all its just the differing kp that changes due to x
-
-  }
-  else {
-    scenario = 3;
-  }  
-}
-
-
-void rotate()
-{
-  //  always turn CW, note that gyro reads -90/270 when turning exactly 90 deg CW
-  //  bot should be aligned already before rotating
-
-  float angle; // global variable
-
-  speed_val = 200;
-
-  if (rotations < 4) {
-
-    if (angle > 285) { //angle[rotations];
-      cw();
-    }
-    scenario = 1; 
-    rotations ++; 
-  }
-  else {
-    scenario = 4;
-  }
-}
-
-
-float Controller (int i) { //ye dude
-
-  float output = 0;
-  
-  error[i] = setP[i] - cur[i]; 
-  ierror[i] = ierror[i] + error[i];
-  
-  output = kp[i] * error[i] + ki[i] * ierror[i];
-  
-  if (i > 0) {
-    if (abs(output) > 800) { //saftey for motors????  
-      output = 800.0;
-    }
-  }
-  else {
-    output = 200.0; //saftey on x correction
-  }
-
-  Serial.print(i);
-  Serial.print(output);
-  return output;
-  
+  Y = mm;
 }
 
 
