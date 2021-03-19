@@ -165,6 +165,7 @@ void loop(void) //main loop
   switch (machine_state) {
     case INITIALISING:
       machine_state = initialising();
+      gyroSet ();
       break;
     case RUNNING: //Lipo Battery Volage OK
       machine_state =  running();             
@@ -215,20 +216,20 @@ STATE running() {
           
 
 
-measure();
-
-              //Serial.print("angle : ");
-              //Serial.println(currentAngle);
-              //delay(1000);
+//measure();
+//readGyro();
+//              Serial.print("angle : ");
+//              Serial.println(currentAngle);
+//              delay(1000);
           
       switch (scenario) {
        case 1: //ALIGNING      
-          home(3, 0.2, 3, 0.1);  
+          home(1.5, 0.1, 1.5, 0.1);  
               Serial.print("scenario: ");
               Serial.println(scenario);       
           break;          
         case 2: //OPERATING      
-          drive(5, 0.1, 5);
+          drive(2, 0.2, 15);
              Serial.print("scenario: ");
               Serial.println(scenario); 
           break;
@@ -495,7 +496,7 @@ end = 0;
    measure();
 
    error = lf - lr;
-   power = controller(error, 50, kpRotate, kiRotate);
+   power = controller(error, 20.0, kpRotate, kiRotate);
 
    Serial.print("power 1 : ");
               Serial.println(power); 
@@ -507,7 +508,7 @@ end = 0;
 
    end = endCondition(error, end, 6); //accounts for overshoot endCondition(error, end, tol);
   
- } while (end < 30);
+ } while (end < 50);
 
 gyroSet(); //set up
 
@@ -520,7 +521,7 @@ end = 0;
      measure();
   
      error = 150 - lf;
-     power = controller(error, 50, kpStrafe, kiStrafe);
+     power = controller(error, 20.0, kpStrafe, kiStrafe);
   
     left_font_motor.writeMicroseconds(1500 + power); //kinematics would fix this?
     left_rear_motor.writeMicroseconds(1500 - power);
@@ -529,7 +530,7 @@ end = 0;
   
      end = endCondition(error, end, 6); //accounts for overshoot
     
-   } while (end < 30);
+   } while (end < 50);
 
 
 //count = 0;
@@ -575,12 +576,12 @@ end = 0;
      measure();
   
      error = 150 - fl;
-     //power = controller(error, 200, kpY, kiY);
-     power = kpY * error;
+     power = controller(error, 200.0, kpY, kiY);
+     //power = kpY * error;
 
      xerror = 150 - lf; //keeping it straight
-    // dX = kpX * xerror;
-    dX = controller(xerror, 400, kpX, kiY);
+    dX = kpX * xerror;
+    //dX = controller(xerror, 400, kpX, kiY);
   
     left_font_motor.writeMicroseconds(1500 - power + dX); //kinematics would fix this?
     left_rear_motor.writeMicroseconds(1500 - power + dX);
@@ -607,13 +608,14 @@ end = 0;
   Serial.print("scenario: ");
               Serial.println(scenario); 
 
-   measure();
+   //measure();
+   readGyro(); //calculating rotation
 
               Serial.print("angle : ");
               Serial.println(currentAngle); 
     
    error = angle  - currentAngle;
-   power = controller(error, 10, kp, ki);
+   power = controller(error, 50, kp, ki);
       
 
    left_font_motor.writeMicroseconds(1500 - power); //kinematics would fix this?
@@ -626,7 +628,7 @@ end = 0;
   
  } while (end < 15);
 
-gyroSet(); //set up
+//gyroSet(); //set up
 
   if (rotations < 4){
   scenario = 2;
@@ -646,11 +648,15 @@ gyroSet(); //set up
 
 float controller(float error, float ramp, float kp, float ki){
 
-  if (error > 20){   //stops integral affecting power till small error
+  if (error > 30){   //stops integral affecting power till small error
     integral = 0;
   }
   
+  
   integral = integral + error;
+
+  //integral = constrain(u, -200, 200);
+  
   u = kp * error + ki * integral; 
 
   Serial.print("u : ");
@@ -665,7 +671,7 @@ float controller(float error, float ramp, float kp, float ki){
   power = (power * (1/ramp * count)); //increases power
   count = count + 1;
 
-  //delay(10);
+  delay(1);
   return power;
 }
 
@@ -680,7 +686,7 @@ float endCondition(float error, int count, int tolerance) { //accounts for overs
   }
 
 
-  delay(1);
+  //delay(1);
   return count;
 }
 
@@ -716,7 +722,7 @@ void measure () {
   //Serial.println(ir4val);
 
   HC_SR04_range(); //caluclating distance ultra
-  readGyro(); //calculating rotation
+  //readGyro(); //calculating rotation
 
   fl = ir1val; //setting sensors
   fr = ir2val;
