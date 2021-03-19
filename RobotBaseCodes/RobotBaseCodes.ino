@@ -84,15 +84,9 @@ void setup(void)
 }
 
 
-
-
-
-
-
-
 // --------------------- OUR CODE -------------------------
 
-
+//setting up of the controller
 float kpHomeStraight = 3;
 float kiHomeStraight = 0.1;
 float kpHomeStrafe = 3;
@@ -105,15 +99,15 @@ float kpDriveStraight = 20;
 float kpRotate = 2;
 float kiRotate = 0.5;
 
-
+//this is the range the error has to be in to be able to exit
 float toleranceParallel = 6;
 float toleranceX = 6;
 float toleranceY = 6;
 float toleranceAngle = 10;
 
+int scenario = 1; //scenario decides the beginning case
 
-
-
+//other variables used
 float error = 0;
 float integral = 0;
 float power = 0;
@@ -122,7 +116,7 @@ float angle = 90;
 
 int count = 0;
 int end = 0;
-
+int rotations = 0;
 
 
 //set up IR sensors, ultra sonic and gyro
@@ -176,11 +170,6 @@ float Y = 0; //from ultrasonic
 //float sensDist[] = {83.1, 103.64}; //distance between sensors X then Y
 
 
-
-int scenario = 1; //either alligning or
-int rotations = 0;
-
-
 //Setup gyro
 float sum = 0;
 
@@ -224,7 +213,7 @@ STATE running() {
   if (!is_battery_voltage_OK()) return STOPPED;
 #endif
 
-//code begins -------------------------------------------------------------------------------------------
+  //code begins -------------------------------------------------------------------------------------------
 
   //   if (SerialCom->available()) {    //the code that allows us to start/stop from laptop
   //    char val = SerialCom->read();
@@ -245,7 +234,7 @@ STATE running() {
       drive();
       break;
     case 3: //Rotating
-     // rotate();
+      // rotate();
       break;
     case 4: //stop everything       //remove if using pc comands
       stop();
@@ -265,20 +254,18 @@ STATE running() {
   return RUNNING;
 }
 
-
-
 //MY FUNCTIONS Boi
 
-void home() {
+void home() { //alligns the robot at the beginning and zeros the gyro
 
-  reset();
-  
+  reset(); //resets vraible to 0
+
   do { //rotate
 
-    measure();
+    measure(); //measures all the sensors
 
     error = lf - lr;
-    power = controller(error, 1, kpHomeStraight, kiHomeStraight);
+    power = controller(error, kpHomeStraight, kiHomeStraight);
 
     left_font_motor.writeMicroseconds(1500 - power); //kinematics would fix this?
     left_rear_motor.writeMicroseconds(1500 - power);
@@ -287,7 +274,7 @@ void home() {
 
     end = endCondition(error, end, toleranceParallel); //accounts for overshoot endCondition(error, end, tol);
 
-  } while (end < 30);
+  } while (end < 30); //overshoot protection
 
   gyroSet(); //set up
 
@@ -298,7 +285,7 @@ void home() {
     measure();
 
     error = 200 - lf;
-    power = controller(error, 1, kpHomeStrafe, kiHomeStrafe);
+    power = controller(error, kpHomeStrafe, kiHomeStrafe);
 
     left_font_motor.writeMicroseconds(1500 + power); //kinematics would fix this?
     left_rear_motor.writeMicroseconds(1500 - power);
@@ -309,30 +296,8 @@ void home() {
 
   } while (end < 30);
 
-
-  reset();
-  
-//  do { //rotate
-//
-//    measure();
-//
-//    error = lf - lr;
-//    power = controller(error, 1, kpHomeStraight, kiHomeStraight);
-//
-//    left_font_motor.writeMicroseconds(1500 - power); //kinematics would fix this?
-//    left_rear_motor.writeMicroseconds(1500 - power);
-//    right_rear_motor.writeMicroseconds(1500 - power);
-//    right_font_motor.writeMicroseconds(1500 - power);
-//
-//    end = endCondition(error, end, toleranceParallel); //accounts for overshoot endCondition(error, end, tol);
-//
-//  } while (end < 15);
-//
-//  gyroSet(); //set 
-
   scenario = 2;
 }
-
 
 void drive() {
 
@@ -346,16 +311,15 @@ void drive() {
     measure();
 
     error = 250 - Y;
-    power = controller(error, 1, kpDriveY, kiDriveY);
+    power = controller(error, kpDriveY, kiDriveY);
 
     xerror = 200 - lf; //keeping it straight
     dX = kpDriveStraight * xerror * fix;
-    dX = constrain(dX, -200, 200); //stops the glitch half way through
+    dX = constrain(dX, -200, 200); //stops the glitch half way through where rotaion power cancelled out forward power
 
-    if (abs(error) < 20) {    //stops the wackness at the end
+    if (abs(error) < 20) {    //stops the wackness at the end where it rotates randomly
       fix = 0;
     }
-    
 
     left_font_motor.writeMicroseconds(1500 - power + dX); //kinematics would fix this?
     left_rear_motor.writeMicroseconds(1500 - power + dX);
@@ -369,7 +333,6 @@ void drive() {
   scenario = 3;
 }
 
-
 void rotate() {
 
   reset();
@@ -379,10 +342,7 @@ void rotate() {
     readGyro(); //calculating rotation
 
     error = angle  - currentAngle;
-
-    //power = error * 5;
-    power = controller(error, 1, kpRotate, kiRotate);
-
+    power = controller(error, kpRotate, kiRotate);
 
     left_font_motor.writeMicroseconds(1500 - power); //kinematics would fix this?
     left_rear_motor.writeMicroseconds(1500 - power);
@@ -393,68 +353,45 @@ void rotate() {
 
   } while (end < 10);
 
-  //gyroSet(); //set up
-
-  if (rotations < 4) {
+  if (rotations < 4) { //checks to see if it has completed 3 rotations
     scenario = 2;
     rotations = rotations + 1;
   }
   else {
-    scenario = 4;
+    scenario = 4; //all rotations are finished, robot is stopped
   }
-
-  angle += 90;
-
+  angle += 90; //after each rotation the robots new setpoint increases by 90 degrees
 }
-
 
 
 //Helper functions
 
-float controller(float error, float ramp, float kp, float ki) {
+float controller(float error, float kp, float ki) {
 
   if (error > 30) {  //stops integral affecting power till small error
     integral = 0;
   }
-
-
   integral = integral + error;
-
-  //integral = constrain(u, -200, 200);
 
   u = kp * error + ki * integral;
 
-  //Serial.print("u : ");
-  //Serial.println(u);
-
   power = constrain(u, -500, 500); //motor saftey
 
-  if (count > ramp) { //ramp
-    count = ramp;
-  }
-
-  power = (power * (1 / ramp * count)); //increases power
-  count = count + 1;
-
-  delay(1);
+  delay(1); //appears to help?
   return power;
 }
 
-
 float endCondition(float error, int count, int tolerance) { //accounts for overshoot and ensures setpoint is reached
+  //if the error is within the tollerance for a set amount of iterations the code will exit
 
-  if (abs(error) <= tolerance) {
+  if (abs(error) <= tolerance) { //if its within the tolerance start counting
     count = count + 1;
   }
-  else {
+  else { //if it leaves the tolerance reset the counter
     count = 0;
   }
-
-
-  //delay(1);
   return count;
 }
-
 
 void reset () {
   count = 0;
@@ -463,46 +400,21 @@ void reset () {
 }
 
 
-
-
-
-
-
-
-
-
 void measure () {
 
   ir1ADC = analogRead(irSensor1);
-  //Serial.print("IR Sensor 1 ADC: ");
-  //Serial.println(ir1ADC);
   ir1val = 0 - pow(ir1ADC, 3) * 0.000004 + pow(ir1ADC, 2) * 0.0056 - ir1ADC * 2.9377 + 708.67;
-  //Serial.print("IR Sensor 1 distance: ");
-  //Serial.println(ir1val);
 
   ir2ADC = analogRead(irSensor2 );
-  //Serial.print("IR Sensor 2 ADC: ");
-  //Serial.println(ir2ADC);
   ir2val = 0 - pow(ir2ADC, 3) * 0.000005 + pow(ir2ADC, 2) * 0.0072 - ir2ADC * 3.7209 + 831.08;
-  //Serial.print("IR Sensor 2 distance: ");
-  //Serial.println(ir2val);
 
   ir3ADC = analogRead(irSensor3);
-  //Serial.print("IR Sensor 3 ADC: ");
-  //Serial.println(ir3ADC);
   ir3val = 0 - pow(ir3ADC, 3) * 0.000004 + pow(ir3ADC, 2) * 0.0054 - ir3ADC * 2.4371 + 466.8;
-  //Serial.print("IR Sensor 3 distance: ");
-  //Serial.println(ir3val);
 
   ir4ADC = analogRead(irSensor4);
-  //Serial.print("IR Sensor 4 ADC: ");
-  //Serial.println(ir4ADC);
   ir4val = 0 - pow(ir4ADC, 3) * 0.000003 + pow(ir4ADC, 2) * 0.0043 - ir4ADC * 1.9775 + 404.3;
-  //Serial.print("IR Sensor 4 distance: ");
-  //Serial.println(ir4val);
 
   HC_SR04_range(); //caluclating distance ultra
-  //readGyro(); //calculating rotation
 
   fl = ir1val; //setting sensors
   fr = ir2val;
@@ -511,7 +423,6 @@ void measure () {
 
   Y = mm;
 }
-
 
 void readGyro() { //tom
   gyroRate = (analogRead(gyroSensor) * gyroSupplyVoltage) / 1023;
@@ -549,10 +460,6 @@ void readGyro() { //tom
   delay(T);
 }
 
-
-
-//gyro zero
-
 void gyroSet () {
   for (int i = 0; i < 100; i++) // read 100 values of voltage when gyro is at still, to calculate the zero-drift.
   {
@@ -561,20 +468,10 @@ void gyroSet () {
     delay(5);
   }
   gyroZeroVoltage = sum / 100; // average the sum as the zero drifting
-
-
-  //delay(1000); //settling time but no really needed
-
 }
 
 
-
-
-
-
-
-
-
+//Provide code --------------------------------------------------------------------------------------------------------------
 
 //Stop of Lipo Battery voltage is too low, to protect Battery
 STATE stopped() {
