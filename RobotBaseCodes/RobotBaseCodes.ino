@@ -287,7 +287,7 @@ void home() {
 
     end = endCondition(error, end, toleranceParallel); //accounts for overshoot endCondition(error, end, tol);
 
-  } while (end < 15);
+  } while (end < 30);
 
   gyroSet(); //set up
 
@@ -307,7 +307,7 @@ void home() {
 
     end = endCondition(error, end, toleranceX); //accounts for overshoot
 
-  } while (end < 15);
+  } while (end < 30);
 
 
   reset();
@@ -364,7 +364,7 @@ void drive() {
 
     end = endCondition(error, end, toleranceY); //accounts for overshoot
 
-  } while (end < 5);
+  } while (end < 15);
 
   scenario = 3;
 }
