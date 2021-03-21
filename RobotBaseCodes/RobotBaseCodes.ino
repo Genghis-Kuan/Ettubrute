@@ -79,6 +79,8 @@ void setup(void)
   delay(1000);
   SerialCom->println("Setup....");
 
+  gyroSet();
+  
   delay(1000); //settling time but no really needed
 
 }
@@ -228,13 +230,14 @@ STATE running() {
 
   switch (scenario) {
     case 1: //ALIGNING
-      home();
+    rotate();
+//      home();
       break;
     case 2: //OPERATING
       drive();
       break;
     case 3: //Rotating
-      // rotate();
+      rotate();
       break;
     case 4: //stop everything       //remove if using pc comands
       stop();
@@ -335,32 +338,67 @@ void drive() {
 
 void rotate() {
 
-  reset();
+reset();
 
-  do { //rotate
+  do {
 
-    readGyro(); //calculating rotation
+    readGyro();
 
-    error = angle  - currentAngle;
-    power = controller(error, kpRotate, kiRotate);
+    // method to use if gyro works as expected:
+    // readGyro()
+    // power motors
+    // while angle is less than 90 degrees (or difference between desired angle and current angle is greater than 0), keep powering wheels until within toleranceAngle
+    // align after rotation
+    // implement PI after bulk of the movement works
+
+    // if gyro doesn't work as expected:
+    // measure()
+    // power motors
+    // check to see if ultrasonic reads greater than x amount? or use counter for LHS alignment?
+    // if yes, stop rotating
+
+   
+    power = -100;
+
+    error = abs(angle - currentAngle);
+    Serial.print("error:");
+    Serial.println(error);
 
     left_font_motor.writeMicroseconds(1500 - power); //kinematics would fix this?
     left_rear_motor.writeMicroseconds(1500 - power);
     right_rear_motor.writeMicroseconds(1500 - power);
     right_font_motor.writeMicroseconds(1500 - power);
+    
+  } while (error > 10); // get within 5 degrees
 
-    end = endCondition(error, end, toleranceAngle); //accounts for overshoot endCondition(error, end, tol);
+  reset();
 
-  } while (end < 10);
-
-  if (rotations < 4) { //checks to see if it has completed 3 rotations
-    scenario = 2;
-    rotations = rotations + 1;
-  }
-  else {
-    scenario = 4; //all rotations are finished, robot is stopped
-  }
-  angle += 90; //after each rotation the robots new setpoint increases by 90 degrees
+//  reset();
+//
+//  do { //rotate
+//
+//    readGyro(); //calculating rotation
+//
+//    error = angle  - currentAngle;
+//    power = controller(error, kpRotate, kiRotate);
+//
+//    left_font_motor.writeMicroseconds(1500 - power); //kinematics would fix this?
+//    left_rear_motor.writeMicroseconds(1500 - power);
+//    right_rear_motor.writeMicroseconds(1500 - power);
+//    right_font_motor.writeMicroseconds(1500 - power);
+//
+//    end = endCondition(error, end, toleranceAngle); //accounts for overshoot endCondition(error, end, tol);
+//
+//  } while (end < 10);
+//
+//  if (rotations < 4) { //checks to see if it has completed 3 rotations
+//    scenario = 2;
+//    rotations = rotations + 1;
+//  }
+//  else {
+//    scenario = 4; //all rotations are finished, robot is stopped
+//  }
+//  angle += 90; //after each rotation the robots new setpoint increases by 90 degrees
 }
 
 
