@@ -88,16 +88,16 @@ void setup(void)
 
 //setting up of the controller
 float kpHomeStraight = 4.5;
-float kiHomeStraight = 0.1;
-float kpHomeStrafe = 3;
+float kiHomeStraight = 0.05;
+float kpHomeStrafe = 4.5;
 float kiHomeStrafe = 0.05;
 
 float kpDriveY = 0.5;
 float kiDriveY = 0.05;
-float kpDriveStraight = 10;
+float kpDriveStraight = 5;
 
-float kpRotate = 2;
-float kiRotate = 0.5;
+float kpRotate = 4;
+float kiRotate = 0.077;
 
 //this is the range the error has to be in to be able to exit
 float toleranceParallel = 6;
@@ -285,7 +285,7 @@ void drive() {
 
     measure();
 
-    error = 250 - Y;
+    error = 300 - Y;
     power = controller(error, kpDriveY, kiDriveY);
 
     xerror = 200 - lf + lr - lf; //keeping it straight
@@ -312,7 +312,7 @@ void rotate() {
 
 reset();
 
-  if (rotations < 4) {
+  if (rotations < 3) {
 
     do {  
       readGyro();    
@@ -320,18 +320,20 @@ reset();
     SerialCom->println("Rotate Func:");
     SerialCom->println("currentAngle: ");
     SerialCom->print(currentAngle);
-    SerialCom->println("angle: ");
-    SerialCom->println(angle);
-    power = -100;   
+    SerialCom->println("error: ");
+    SerialCom->println(error);
+    power = controller(error, kpRotate, kiRotate);   
       
-    left_font_motor.writeMicroseconds(1500 - power); //kinematics would fix this?
-      left_rear_motor.writeMicroseconds(1500 - power);
-      right_rear_motor.writeMicroseconds(1500 - power);
-      right_font_motor.writeMicroseconds(1500 - power);
+  left_font_motor.writeMicroseconds(1500 + power); //kinematics would fix this?
+    left_rear_motor.writeMicroseconds(1500 + power);
+    right_rear_motor.writeMicroseconds(1500 + power);
+    right_font_motor.writeMicroseconds(1500 + power);
       
-    } while (error > 5); // get within 5 degrees
+    } while (error > 3); // get within 5 degrees
 
-    rotations++;
+    rotations = rotations + 1;
+    SerialCom->println("rotations:");
+    SerialCom->print(rotations);
     scenario = 2;
   
   } else {
