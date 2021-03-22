@@ -73,13 +73,11 @@ void setup(void)
   digitalWrite(TRIG_PIN, LOW);
 
   // Setup the Serial port and pointer, the pointer allows switching the debug info through the USB port(Serial) or Bluetooth port(Serial1) with ease.
-  SerialCom = &Serial;
+  SerialCom = &Serial1;
   SerialCom->begin(115200);
   SerialCom->println("MECHENG706_Base_Code_25/01/2018");
   delay(1000);
   SerialCom->println("Setup....");
-
-  gyroSet();
   
   delay(1000); //settling time but no really needed
 
@@ -89,14 +87,14 @@ void setup(void)
 // --------------------- OUR CODE -------------------------
 
 //setting up of the controller
-float kpHomeStraight = 3.5;
-float kiHomeStraight = 0.05;
-float kpHomeStrafe = 3.5;
+float kpHomeStraight = 4.5;
+float kiHomeStraight = 0.1;
+float kpHomeStrafe = 3;
 float kiHomeStrafe = 0.05;
 
-float kpDriveY = 1;
-float kiDriveY = 0.1;
-float kpDriveStraight = 15;
+float kpDriveY = 0.5;
+float kiDriveY = 0.05;
+float kpDriveStraight = 10;
 
 float kpRotate = 2;
 float kiRotate = 0.5;
@@ -178,7 +176,6 @@ float sum = 0;
 //end of our code ---------------------------------------------------
 
 
-
 void loop(void) //main loop
 {
   static STATE machine_state = INITIALISING;
@@ -193,7 +190,7 @@ void loop(void) //main loop
     case STOPPED: //Stop of Lipo Battery voltage is too low, to protect Battery
       machine_state =  stopped();
       break;
-  };
+  }
 }
 
 
@@ -216,18 +213,6 @@ STATE running() {
 #endif
 
   //code begins -------------------------------------------------------------------------------------------
-
-  //   if (SerialCom->available()) {    //the code that allows us to start/stop from laptop
-  //    char val = SerialCom->read();
-  //
-  //    //Perform an action depending on the command
-  //    switch (val) {
-  //      case 'b'://Move Forward
-  //      case 'B':
-  //        forward ();
-  //        SerialCom->println("Forward");
-
-
   switch (scenario) {
     case 1: //ALIGNING
       home();
@@ -241,17 +226,7 @@ STATE running() {
     case 4: //stop everything       //remove if using pc comands
       stop();
   }
-
-
-  //      break;        //the code that allows us to start/stop from laptop
-  //    default:
-  //      stop();
-  //      SerialCom->println("stop");
-  //      break;
-  //  }
   //end of my code -------------------------------------------------------------------------------------------------
-
-
 
   return RUNNING;
 }
@@ -263,7 +238,6 @@ void home() { //alligns the robot at the beginning and zeros the gyro
   reset(); //resets vraible to 0
 
   do { //rotate
-
     measure(); //measures all the sensors
 
     error = lf - lr;
@@ -279,7 +253,6 @@ void home() { //alligns the robot at the beginning and zeros the gyro
   } while (end < 15); //overshoot protection
 
   gyroSet(); //set up
-
   reset();
 
   do { //strafe
@@ -315,7 +288,7 @@ void drive() {
     error = 250 - Y;
     power = controller(error, kpDriveY, kiDriveY);
 
-    xerror = 200 - lf + lf - lr; //keeping it straight
+    xerror = 200 - lf + lr - lf; //keeping it straight
     dX = kpDriveStraight * xerror * fix;
     dX = constrain(dX, -200, 200); //stops the glitch half way through where rotaion power cancelled out forward power
 
@@ -341,31 +314,17 @@ reset();
 
   if (rotations < 4) {
 
-    do {
-  
-      readGyro();
-  
-      // method to use if gyro works as expected:
-      // readGyro()
-      // power motors
-      // while angle is less than 90 degrees (or difference between desired angle and current angle is greater than 0), keep powering wheels until within toleranceAngle
-      // align after rotation
-      // implement PI after bulk of the movement works
-  
-      // if gyro doesn't work as expected:
-      // measure()
-      // power motors
-      // check to see if ultrasonic reads greater than x amount? or use counter for LHS alignment?
-      // if yes, stop rotating
-  
-     
-      power = -100;
-  
-      error = abs(angle - currentAngle);
-      Serial.print("error:");
-      Serial.println(error);
-  
-      left_font_motor.writeMicroseconds(1500 - power); //kinematics would fix this?
+    do {  
+      readGyro();    
+    error = abs(angle - currentAngle);
+    SerialCom->println("Rotate Func:");
+    SerialCom->println("currentAngle: ");
+    SerialCom->print(currentAngle);
+    SerialCom->println("angle: ");
+    SerialCom->println(angle);
+    power = -100;   
+      
+    left_font_motor.writeMicroseconds(1500 - power); //kinematics would fix this?
       left_rear_motor.writeMicroseconds(1500 - power);
       right_rear_motor.writeMicroseconds(1500 - power);
       right_font_motor.writeMicroseconds(1500 - power);
@@ -378,26 +337,7 @@ reset();
   } else {
     scenario = 4;
   }
-
-
-//  reset();
-//
-//  do { //rotate
-//
-//    readGyro(); //calculating rotation
-//
-//    error = angle  - currentAngle;
-//    power = controller(error, kpRotate, kiRotate);
-//
-//    left_font_motor.writeMicroseconds(1500 - power); //kinematics would fix this?
-//    left_rear_motor.writeMicroseconds(1500 - power);
-//    right_rear_motor.writeMicroseconds(1500 - power);
-//    right_font_motor.writeMicroseconds(1500 - power);
-//
-//    end = endCondition(error, end, toleranceAngle); //accounts for overshoot endCondition(error, end, tol);
-//
-//  } while (end < 10);
-//
+  angle += 90;
 
 }
 
@@ -406,7 +346,7 @@ reset();
 
 float controller(float error, float kp, float ki) {
 
-  if (error > 30) {  //stops integral affecting power till small error
+  if (error > 20) {  //stops integral affecting power till small error
     integral = 0;
   }
   integral = integral + error;
@@ -481,8 +421,6 @@ void readGyro() { //tom
   }
 
   // keep the angle between 0-360
-
-
   if (currentAngle < 0)
   {
     currentAngle += 360;
@@ -491,10 +429,8 @@ void readGyro() { //tom
   {
     currentAngle -= 360;
   }
-
-  //Serial.print(angularVelocity);
-  //Serial.print(" ");
-  Serial.println(currentAngle);
+  
+  SerialCom->println(currentAngle);
   delay(T);
 }
 
