@@ -89,14 +89,14 @@ void setup(void)
 // --------------------- OUR CODE -------------------------
 
 //setting up of the controller
-float kpHomeStraight = 3;
-float kiHomeStraight = 0.1;
-float kpHomeStrafe = 3;
-float kiHomeStrafe = 0.1;
+float kpHomeStraight = 3.5;
+float kiHomeStraight = 0.05;
+float kpHomeStrafe = 3.5;
+float kiHomeStrafe = 0.05;
 
 float kpDriveY = 1;
 float kiDriveY = 0.1;
-float kpDriveStraight = 20;
+float kpDriveStraight = 15;
 
 float kpRotate = 2;
 float kiRotate = 0.5;
@@ -230,8 +230,7 @@ STATE running() {
 
   switch (scenario) {
     case 1: //ALIGNING
-    rotate();
-//      home();
+      home();
       break;
     case 2: //OPERATING
       drive();
@@ -277,7 +276,7 @@ void home() { //alligns the robot at the beginning and zeros the gyro
 
     end = endCondition(error, end, toleranceParallel); //accounts for overshoot endCondition(error, end, tol);
 
-  } while (end < 30); //overshoot protection
+  } while (end < 15); //overshoot protection
 
   gyroSet(); //set up
 
@@ -297,7 +296,7 @@ void home() { //alligns the robot at the beginning and zeros the gyro
 
     end = endCondition(error, end, toleranceX); //accounts for overshoot
 
-  } while (end < 30);
+  } while (end < 15);
 
   scenario = 2;
 }
@@ -316,7 +315,7 @@ void drive() {
     error = 250 - Y;
     power = controller(error, kpDriveY, kiDriveY);
 
-    xerror = 200 - lf; //keeping it straight
+    xerror = 200 - lf + lf - lr; //keeping it straight
     dX = kpDriveStraight * xerror * fix;
     dX = constrain(dX, -200, 200); //stops the glitch half way through where rotaion power cancelled out forward power
 
@@ -331,7 +330,7 @@ void drive() {
 
     end = endCondition(error, end, toleranceY); //accounts for overshoot
 
-  } while (end < 15);
+  } while (end < 5);
 
   scenario = 3;
 }
@@ -340,38 +339,46 @@ void rotate() {
 
 reset();
 
-  do {
+  if (rotations < 4) {
 
-    readGyro();
+    do {
+  
+      readGyro();
+  
+      // method to use if gyro works as expected:
+      // readGyro()
+      // power motors
+      // while angle is less than 90 degrees (or difference between desired angle and current angle is greater than 0), keep powering wheels until within toleranceAngle
+      // align after rotation
+      // implement PI after bulk of the movement works
+  
+      // if gyro doesn't work as expected:
+      // measure()
+      // power motors
+      // check to see if ultrasonic reads greater than x amount? or use counter for LHS alignment?
+      // if yes, stop rotating
+  
+     
+      power = -100;
+  
+      error = abs(angle - currentAngle);
+      Serial.print("error:");
+      Serial.println(error);
+  
+      left_font_motor.writeMicroseconds(1500 - power); //kinematics would fix this?
+      left_rear_motor.writeMicroseconds(1500 - power);
+      right_rear_motor.writeMicroseconds(1500 - power);
+      right_font_motor.writeMicroseconds(1500 - power);
+      
+    } while (error > 5); // get within 5 degrees
 
-    // method to use if gyro works as expected:
-    // readGyro()
-    // power motors
-    // while angle is less than 90 degrees (or difference between desired angle and current angle is greater than 0), keep powering wheels until within toleranceAngle
-    // align after rotation
-    // implement PI after bulk of the movement works
+    rotations++;
+    scenario = 2;
+  
+  } else {
+    scenario = 4;
+  }
 
-    // if gyro doesn't work as expected:
-    // measure()
-    // power motors
-    // check to see if ultrasonic reads greater than x amount? or use counter for LHS alignment?
-    // if yes, stop rotating
-
-   
-    power = -100;
-
-    error = abs(angle - currentAngle);
-    Serial.print("error:");
-    Serial.println(error);
-
-    left_font_motor.writeMicroseconds(1500 - power); //kinematics would fix this?
-    left_rear_motor.writeMicroseconds(1500 - power);
-    right_rear_motor.writeMicroseconds(1500 - power);
-    right_font_motor.writeMicroseconds(1500 - power);
-    
-  } while (error > 10); // get within 5 degrees
-
-  reset();
 
 //  reset();
 //
@@ -391,14 +398,7 @@ reset();
 //
 //  } while (end < 10);
 //
-//  if (rotations < 4) { //checks to see if it has completed 3 rotations
-//    scenario = 2;
-//    rotations = rotations + 1;
-//  }
-//  else {
-//    scenario = 4; //all rotations are finished, robot is stopped
-//  }
-//  angle += 90; //after each rotation the robots new setpoint increases by 90 degrees
+
 }
 
 
