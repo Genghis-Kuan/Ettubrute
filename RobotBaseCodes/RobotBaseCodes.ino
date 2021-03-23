@@ -78,7 +78,7 @@ void setup(void)
   SerialCom->println("MECHENG706_Base_Code_25/01/2018");
   delay(1000);
   SerialCom->println("Setup....");
-  
+
   delay(1000); //settling time but no really needed
 
 }
@@ -97,7 +97,7 @@ float kiDriveY = 0.05;
 float kpDriveStraight = 5;
 
 float kpRotate = 4;
-float kiRotate = 0.077;
+float kiRotate = 0.2;
 
 //this is the range the error has to be in to be able to exit
 float toleranceParallel = 6;
@@ -285,7 +285,7 @@ void drive() {
 
     measure();
 
-    error = 300 - Y;
+    error = 250 - Y; //200mm is reference to wall distance
     power = controller(error, kpDriveY, kiDriveY);
 
     xerror = 200 - lf + lr - lf; //keeping it straight
@@ -310,32 +310,32 @@ void drive() {
 
 void rotate() {
 
-reset();
+  reset();
 
   if (rotations < 3) {
 
-    do {  
-      readGyro();    
-    error = abs(angle - currentAngle);
-    SerialCom->println("Rotate Func:");
-    SerialCom->println("currentAngle: ");
-    SerialCom->print(currentAngle);
-    SerialCom->println("error: ");
-    SerialCom->println(error);
-    power = controller(error, kpRotate, kiRotate);   
-      
-  left_font_motor.writeMicroseconds(1500 + power); //kinematics would fix this?
-    left_rear_motor.writeMicroseconds(1500 + power);
-    right_rear_motor.writeMicroseconds(1500 + power);
-    right_font_motor.writeMicroseconds(1500 + power);
-      
+    do {
+      readGyro();
+      error = abs(angle - currentAngle);
+      SerialCom->println("Rotate Func:");
+      SerialCom->println("currentAngle: ");
+      SerialCom->print(currentAngle);
+      SerialCom->println("error: ");
+      SerialCom->println(error);
+      power = controller(error, kpRotate, kiRotate);
+
+      left_font_motor.writeMicroseconds(1500 + power); //kinematics would fix this?
+      left_rear_motor.writeMicroseconds(1500 + power);
+      right_rear_motor.writeMicroseconds(1500 + power);
+      right_font_motor.writeMicroseconds(1500 + power);
+
     } while (error > 3); // get within 5 degrees
 
     rotations = rotations + 1;
     SerialCom->println("rotations:");
     SerialCom->print(rotations);
     scenario = 2;
-  
+
   } else {
     scenario = 4;
   }
@@ -389,10 +389,18 @@ void measure () {
   ir2val = 0 - pow(ir2ADC, 3) * 0.000005 + pow(ir2ADC, 2) * 0.0072 - ir2ADC * 3.7209 + 831.08;
 
   ir3ADC = analogRead(irSensor3);
-  ir3val = 0 - pow(ir3ADC, 3) * 0.000004 + pow(ir3ADC, 2) * 0.0054 - ir3ADC * 2.4371 + 466.8;
+  ir3val = 0 - pow(ir3ADC, 3) * 0.00002 + pow(ir3ADC, 2) * 0.0198 - ir3ADC * 5.7267 + 702.2;//new calibration
+  //SerialCom->print("IR3: mV/mm = ");
+  //SerialCom->print(ir3ADC);
+  //SerialCom->print("/");
+  //SerialCom->println(ir3val);
 
   ir4ADC = analogRead(irSensor4);
-  ir4val = 0 - pow(ir4ADC, 3) * 0.000003 + pow(ir4ADC, 2) * 0.0043 - ir4ADC * 1.9775 + 404.3;
+  ir4val = 0 - pow(ir4ADC, 3) * 0.00001 + pow(ir4ADC, 2) * 0.0114 - ir4ADC * 3.5445 + 516.18;//new calibration
+  //SerialCom->print("IR4: mV/mm = ");
+  //SerialCom->print(ir4ADC);
+  //SerialCom->print("/");
+  //SerialCom->println(ir4val);
 
   HC_SR04_range(); //caluclating distance ultra
 
@@ -431,7 +439,7 @@ void readGyro() { //tom
   {
     currentAngle -= 360;
   }
-  
+
   SerialCom->println(currentAngle);
   delay(T);
 }
