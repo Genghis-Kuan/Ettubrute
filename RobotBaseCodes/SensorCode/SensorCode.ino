@@ -72,7 +72,7 @@ int ir4val;
 //------------- Gyro variables----------------------------
 
 int gyroSensor = A5;
-float T = millis();
+float T = 100;
 byte serialRead = 0;
 int gyroSignalADC = 0;
 float gyroSupplyVoltage = 5;
@@ -142,38 +142,38 @@ void setup(void)
 
 void loop(void) //main loop
 {
-  ir1ADC = analogRead(irSensor1);
-  Serial.print("IR Sensor 1 ADC: ");
-  Serial.println(ir1ADC);
-  ir1val = 0 - pow(ir1ADC,3) * 0.000004 + pow(ir1ADC,2) * 0.0056 - ir1ADC * 2.9377 + 708.67;
-  Serial.print("IR Sensor 1 distance: ");
-  Serial.println(ir1val);
-
-  ir2ADC = analogRead(irSensor2);
-  Serial.print("IR Sensor 2 ADC: ");
-  Serial.println(ir2ADC);
-  ir2val = 0 - pow(ir2ADC,3) * 0.000005 + pow(ir2ADC,2) * 0.0072 - ir2ADC * 3.7209 + 831.08;
-  Serial.print("IR Sensor 2 distance: ");
-  Serial.println(ir2val);
-
-  ir3ADC = analogRead(irSensor3);
-  Serial.print("IR Sensor 3 ADC: ");
-  Serial.println(ir3ADC);
-  ir3val = 0 - pow(ir3ADC,3) * 0.000004 + pow(ir3ADC,2) * 0.0054 - ir3ADC * 2.4371 + 466.8;
-  Serial.print("IR Sensor 3 distance: ");
-  Serial.println(ir3val);
-
-  ir4ADC = analogRead(irSensor4);
-  Serial.print("IR Sensor 4 ADC: ");
-  Serial.println(ir4ADC);
-  ir4val = 0 - pow(ir4ADC,3) * 0.000003 + pow(ir4ADC,2) * 0.0043 - ir4ADC * 1.9775 + 404.3;
-  Serial.print("IR Sensor 4 distance: ");
-  Serial.println(ir4val);
-
-  HC_SR04_range();
+//  ir1ADC = analogRead(irSensor1);
+//  Serial.print("IR Sensor 1 ADC: ");
+//  Serial.println(ir1ADC);
+//  ir1val = 0 - pow(ir1ADC,3) * 0.000004 + pow(ir1ADC,2) * 0.0056 - ir1ADC * 2.9377 + 708.67;
+//  Serial.print("IR Sensor 1 distance: ");
+//  Serial.println(ir1val);
+//
+//  ir2ADC = analogRead(irSensor2);
+//  Serial.print("IR Sensor 2 ADC: ");
+//  Serial.println(ir2ADC);
+//  ir2val = 0 - pow(ir2ADC,3) * 0.000005 + pow(ir2ADC,2) * 0.0072 - ir2ADC * 3.7209 + 831.08;
+//  Serial.print("IR Sensor 2 distance: ");
+//  Serial.println(ir2val);
+//
+//  ir3ADC = analogRead(irSensor3);
+//  Serial.print("IR Sensor 3 ADC: ");
+//  Serial.println(ir3ADC);
+//  ir3val = 0 - pow(ir3ADC,3) * 0.000004 + pow(ir3ADC,2) * 0.0054 - ir3ADC * 2.4371 + 466.8;
+//  Serial.print("IR Sensor 3 distance: ");
+//  Serial.println(ir3val);
+//
+//  ir4ADC = analogRead(irSensor4);
+//  Serial.print("IR Sensor 4 ADC: ");
+//  Serial.println(ir4ADC);
+//  ir4val = 0 - pow(ir4ADC,3) * 0.000003 + pow(ir4ADC,2) * 0.0043 - ir4ADC * 1.9775 + 404.3;
+//  Serial.print("IR Sensor 4 distance: ");
+//  Serial.println(ir4val);
+//
+//  HC_SR04_range();
   readGyro();
 
-  delay(1000);
+  delay(100);
 
 
   static STATE machine_state = INITIALISING;
@@ -584,9 +584,9 @@ void readGyro() {
 
   if (angularVelocity >= rotationThreshold || angularVelocity <= -rotationThreshold) {
     // we are running a loop in T (of T/1000 second).
-    T = millis() - T;
+    //T = millis() - T;
     float angleChange = angularVelocity / (1000 / T);
-    T = millis();
+    //T = millis();
     currentAngle += angleChange;
   }
 

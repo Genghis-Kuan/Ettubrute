@@ -79,8 +79,8 @@ void setup(void)
   delay(1000);
   SerialCom->println("Setup....");
 
-  gyroSet();
-  
+  //gyroSet();
+
   delay(1000); //settling time but no really needed
 
 }
@@ -89,23 +89,26 @@ void setup(void)
 // --------------------- OUR CODE -------------------------
 
 //setting up of the controller
-float kpHomeStraight = 3.5;
-float kiHomeStraight = 0.05;
-float kpHomeStrafe = 3.5;
+float kpHomeStraight = 4.5;
+float kiHomeStraight = 0.08;
+float kpHomeStrafe = 4.5;
 float kiHomeStrafe = 0.05;
 
-float kpDriveY = 1;
-float kiDriveY = 0.1;
-float kpDriveStraight = 15;
+float kpDriveY = 2;
+float kiDriveY = 0.05;
+float kpDriveStraight = 8;
 
-float kpRotate = 2;
-float kiRotate = 0.5;
+float kpRotate = 4.5;
+float kiRotate = 0.05;
+
+float over = 20; //
 
 //this is the range the error has to be in to be able to exit
-float toleranceParallel = 6;
-float toleranceX = 6;
-float toleranceY = 6;
-float toleranceAngle = 10;
+float toleranceParallel = 4;
+float toleranceX = 4;
+float toleranceY = 10;
+float toleranceAngle = 3;
+float toleranceRotate = 5;
 
 int scenario = 1; //scenario decides the beginning case
 
@@ -152,14 +155,14 @@ float  lr = 0;
 //------------- Gyro variables----------------------------
 
 int gyroSensor = A5;
-float T = 100;
+float T = 10;
 byte serialRead = 0;
 int gyroSignalADC = 0;
 float gyroSupplyVoltage = 5;
 
 float gyroZeroVoltage = 0; // the value of voltage when gyro is zero
 float gyroSensitivity = 0.007; // gyro sensitivity unit is (mv/degree/second) get from datasheet
-float rotationThreshold = 1.5; // because of gyro drifting, defining rotation angular velocity less than this value will be ignored
+float rotationThreshold = 0.5; // because of gyro drifting, defining rotation angular velocity less than this value will be ignored
 float gyroRate = 0; // read out value of sensor in voltage
 float currentAngle = 0; // current angle calculated by angular velocity integral on
 
@@ -171,9 +174,6 @@ float mm = 0;
 float Y = 0; //from ultrasonic
 //float sensDist[] = {83.1, 103.64}; //distance between sensors X then Y
 
-
-//Setup gyro
-float sum = 0;
 
 //end of our code ---------------------------------------------------
 
@@ -217,17 +217,6 @@ STATE running() {
 
   //code begins -------------------------------------------------------------------------------------------
 
-  //   if (SerialCom->available()) {    //the code that allows us to start/stop from laptop
-  //    char val = SerialCom->read();
-  //
-  //    //Perform an action depending on the command
-  //    switch (val) {
-  //      case 'b'://Move Forward
-  //      case 'B':
-  //        forward ();
-  //        SerialCom->println("Forward");
-
-
   switch (scenario) {
     case 1: //ALIGNING
       home();
@@ -242,15 +231,7 @@ STATE running() {
       stop();
   }
 
-
-  //      break;        //the code that allows us to start/stop from laptop
-  //    default:
-  //      stop();
-  //      SerialCom->println("stop");
-  //      break;
-  //  }
   //end of my code -------------------------------------------------------------------------------------------------
-
 
 
   return RUNNING;
@@ -276,7 +257,7 @@ void home() { //alligns the robot at the beginning and zeros the gyro
 
     end = endCondition(error, end, toleranceParallel); //accounts for overshoot endCondition(error, end, tol);
 
-  } while (end < 15); //overshoot protection
+  } while (end < 20); //overshoot protection
 
   gyroSet(); //set up
 
@@ -286,7 +267,7 @@ void home() { //alligns the robot at the beginning and zeros the gyro
 
     measure();
 
-    error = 200 - lf;
+    error = 150 - lf;
     power = controller(error, kpHomeStrafe, kiHomeStrafe);
 
     left_font_motor.writeMicroseconds(1500 + power); //kinematics would fix this?
@@ -296,7 +277,7 @@ void home() { //alligns the robot at the beginning and zeros the gyro
 
     end = endCondition(error, end, toleranceX); //accounts for overshoot
 
-  } while (end < 15);
+  } while (end < 20);
 
   scenario = 2;
 }
@@ -312,14 +293,14 @@ void drive() {
 
     measure();
 
-    error = 250 - Y;
+    error = 150 - Y;
     power = controller(error, kpDriveY, kiDriveY);
 
-    xerror = 200 - lf + lf - lr; //keeping it straight
+    xerror = 150 - lf + lr - lf; //keeping it straight
     dX = kpDriveStraight * xerror * fix;
     dX = constrain(dX, -200, 200); //stops the glitch half way through where rotaion power cancelled out forward power
 
-    if (abs(error) < 20) {    //stops the wackness at the end where it rotates randomly
+    if (abs(error) < 30) {    //stops the wackness at the end where it rotates randomly
       fix = 0;
     }
 
@@ -330,74 +311,66 @@ void drive() {
 
     end = endCondition(error, end, toleranceY); //accounts for overshoot
 
-  } while (end < 5);
+  } while (end < 15);
 
   scenario = 3;
 }
 
 void rotate() {
 
-reset();
+  reset();
 
-  if (rotations < 4) {
+  float addon = 0;
+  if (rotations < 3) {
 
     do {
-  
+
       readGyro();
-  
-      // method to use if gyro works as expected:
-      // readGyro()
-      // power motors
-      // while angle is less than 90 degrees (or difference between desired angle and current angle is greater than 0), keep powering wheels until within toleranceAngle
-      // align after rotation
-      // implement PI after bulk of the movement works
-  
-      // if gyro doesn't work as expected:
-      // measure()
-      // power motors
-      // check to see if ultrasonic reads greater than x amount? or use counter for LHS alignment?
-      // if yes, stop rotating
-  
-     
-      power = -100;
-  
-      error = abs(angle - currentAngle);
-      Serial.print("error:");
-      Serial.println(error);
-  
+
+      if (currentAngle > 330) {
+        addon = (360 - currentAngle);
+        currentAngle = 0;
+      }
+      else {
+        addon = 0;
+      }
+
+      error = angle - (currentAngle + addon);
+      power = controller(error, kpRotate, kiRotate);
+
+
+      left_font_motor.writeMicroseconds(1500 + power); //kinematics would fix this?
+      left_rear_motor.writeMicroseconds(1500 + power);
+      right_rear_motor.writeMicroseconds(1500 + power);
+      right_font_motor.writeMicroseconds(1500 + power);
+
+    } while (error > 5); // get within 5 degrees
+
+    reset(); //resets vraible to 0
+
+    do { //rotate
+
+      measure(); //measures all the sensors
+
+      error = lf - lr;
+      power = controller(error, kpHomeStraight, kiHomeStraight);
+
       left_font_motor.writeMicroseconds(1500 - power); //kinematics would fix this?
       left_rear_motor.writeMicroseconds(1500 - power);
       right_rear_motor.writeMicroseconds(1500 - power);
       right_font_motor.writeMicroseconds(1500 - power);
-      
-    } while (error > 5); // get within 5 degrees
+
+      end = endCondition(error, end, toleranceParallel); //accounts for overshoot endCondition(error, end, tol);
+
+    } while (end < 15); //overshoot protection
 
     rotations++;
     scenario = 2;
-  
+
   } else {
     scenario = 4;
   }
-
-
-//  reset();
-//
-//  do { //rotate
-//
-//    readGyro(); //calculating rotation
-//
-//    error = angle  - currentAngle;
-//    power = controller(error, kpRotate, kiRotate);
-//
-//    left_font_motor.writeMicroseconds(1500 - power); //kinematics would fix this?
-//    left_rear_motor.writeMicroseconds(1500 - power);
-//    right_rear_motor.writeMicroseconds(1500 - power);
-//    right_font_motor.writeMicroseconds(1500 - power);
-//
-//    end = endCondition(error, end, toleranceAngle); //accounts for overshoot endCondition(error, end, tol);
-//
-//  } while (end < 10);
-//
+  angle += 80;
 
 }
 
@@ -406,16 +379,16 @@ reset();
 
 float controller(float error, float kp, float ki) {
 
-  if (error > 30) {  //stops integral affecting power till small error
+  if (abs(error) > over) {  //stops integral affecting power till small error
     integral = 0;
   }
   integral = integral + error;
 
   u = kp * error + ki * integral;
 
-  power = constrain(u, -500, 500); //motor saftey
+  power = constrain(u, -300, 300); //motor saftey
 
-  delay(1); //appears to help?
+  //delay(1); //appears to help?
   return power;
 }
 
@@ -447,10 +420,10 @@ void measure () {
   ir2val = 0 - pow(ir2ADC, 3) * 0.000005 + pow(ir2ADC, 2) * 0.0072 - ir2ADC * 3.7209 + 831.08;
 
   ir3ADC = analogRead(irSensor3);
-  ir3val = 0 - pow(ir3ADC, 3) * 0.000004 + pow(ir3ADC, 2) * 0.0054 - ir3ADC * 2.4371 + 466.8;
+  ir3val = - pow(ir3ADC, 3) * 0.00002456 + pow(ir3ADC, 2) * 0.0211 - ir3ADC * 6.1377 + 745.7;
 
   ir4ADC = analogRead(irSensor4);
-  ir4val = 0 - pow(ir4ADC, 3) * 0.000003 + pow(ir4ADC, 2) * 0.0043 - ir4ADC * 1.9775 + 404.3;
+  ir4val = - pow(ir4ADC, 3) * 0.00001452 + pow(ir4ADC, 2) * 0.0124 - ir4ADC * 3.7308 + 525.54;
 
   HC_SR04_range(); //caluclating distance ultra
 
@@ -499,6 +472,8 @@ void readGyro() { //tom
 }
 
 void gyroSet () {
+  //Setup gyro
+  float sum = 0;
   for (int i = 0; i < 100; i++) // read 100 values of voltage when gyro is at still, to calculate the zero-drift.
   {
     gyroSignalADC = analogRead(gyroSensor);
@@ -672,16 +647,16 @@ void HC_SR04_range()
   // Calculate distance in centimeters and inches. The constants
   // are found in the datasheet, and calculated from the assumed speed
   //of sound in air at sea level (~340 m/s).
-  cm = pulse_width / 58.0 + 10.65; //10.65 is distance from centre of bot to edge of sensor
+  cm = pulse_width / 58.0 + 8.7; //10.65 is distance from centre of bot to edge of sensor
   mm = cm * 10;
 
   // Print out results
   if ( pulse_width > MAX_DIST ) {
     //SerialCom->println("HC-SR04: Out of range");
   } else {
-    //SerialCom->print("HC-SR04:");
-    //SerialCom->print(cm);
-    //SerialCom->println("cm");
+    SerialCom->print("HC-SR04:");
+    SerialCom->print(cm);
+    SerialCom->println("cm");
   }
 }
 #endif
