@@ -110,22 +110,22 @@ int rotations = 0;
 int index = 0;
 
 float irSensor1 = A1;
-float ir1ADC[10];
+float ir1ADC[20];
 float mair1;
 float  fl = 0;
 
 float irSensor2 = A2;
-float ir2ADC[10];
+float ir2ADC[20];
 float mair2;
 float  fr = 0;
 
 float irSensor3 = A3;
-float ir3ADC[10];
+float ir3ADC[20];
 float mair3;
 float  lf = 0;
 
 float irSensor4 = A4;
-float ir4ADC[10];
+float ir4ADC[20];
 float mair4;
 float  lr = 0;
 
@@ -168,14 +168,14 @@ void setup(void)
   digitalWrite(TRIG_PIN, LOW);
 
   // Setup the Serial port and pointer, the pointer allows switching the debug info through the USB port(Serial) or Bluetooth port(Serial1) with ease.
-  SerialCom = &Serial;
+  SerialCom = &Serial1;
   //SerialCom->begin(115200);
-  Serial1.begin(9600);
+  Serial.begin(9600);
   SerialCom->println("MECHENG706_Base_Code_25/01/2018");
   delay(1000);
   SerialCom->println("Setup....");
 
-  for (int i = 0; i < 10; i++){
+  for (int i = 0; i < 19; i++){
     measure();
   }
  
@@ -428,9 +428,10 @@ void measure () {
 */
 
   ir3ADC[index] = analogRead(irSensor3);
-  Serial1.println(ir3ADC[index]);
+  Serial.print(ir3ADC[index]);
   mair3 = movingAverage(ir3ADC);
-  Serial1.println(mair3);
+  Serial.print(' ');
+  Serial.println(mair3);
   lf = 0 - pow(mair3, 3) * 0.00002456 + pow(mair3, 2) * 0.0211 - mair3 * 6.1377 + 745.7;
 
 
@@ -439,12 +440,12 @@ void measure () {
   lr = 0 - pow(mair4, 3) * 0.00001452 + pow(mair4, 2) * 0.0124 - mair4 * 3.7308 + 525.54;
 
   index++;
-  if (index > 9) {
+  if (index > 19) {
     index = 0;
   }
 
-  //HC_SR04_range(); //caluclating distance ultra
-  //Y = mm;
+  HC_SR04_range(); //caluclating distance ultra
+  Y = mm;
 }
 
 void readGyro() {
@@ -719,11 +720,11 @@ void stop() //Stop
 }
 
 
-float movingAverage(float irArray[10]) {
+float movingAverage(float irArray[20]) {
   float sum = 0;
-  for (int i = 0; i < 10; i++) {
+  for (int i = 0; i < 20; i++) {
     sum += irArray[i];
   }
-  float ma = sum / 10;
+  float ma = sum / 20;
   return ma;
 }
