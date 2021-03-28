@@ -63,28 +63,6 @@ float speed_change;
 HardwareSerial *SerialCom;
 
 int pos = 0;
-void setup(void)
-{
-  turret_motor.attach(11);
-  pinMode(LED_BUILTIN, OUTPUT);
-
-  // The Trigger pin will tell the sensor to range find
-  pinMode(TRIG_PIN, OUTPUT);
-  digitalWrite(TRIG_PIN, LOW);
-
-  // Setup the Serial port and pointer, the pointer allows switching the debug info through the USB port(Serial) or Bluetooth port(Serial1) with ease.
-  SerialCom = &Serial;
-  SerialCom->begin(115200);
-  SerialCom->println("MECHENG706_Base_Code_25/01/2018");
-  delay(1000);
-  SerialCom->println("Setup....");
-
-  //gyroSet();
-
-  delay(1000); //settling time but no really needed
-
-}
-
 
 // --------------------- OUR CODE -------------------------
 
@@ -123,33 +101,36 @@ int count = 0;
 int end = 0;
 int rotations = 0;
 
-
 //set up IR sensors, ultra sonic and gyro
 //IR1 is Long range front left
 //IR2 is Long range front right
 //IR3 is Short range front
 //IR4 is Short range rear
 
+int index = 0;
+
 float irSensor1 = A1;
-float ir1ADC;
-float ir1val;
+float ir1ADC[10];
+float mair1;
+float  fl = 0;
 
 float irSensor2 = A2;
-float ir2ADC;
-float ir2val;
+float ir2ADC[10];
+float mair2;
+float  fr = 0;
 
 float irSensor3 = A3;
-float ir3ADC;
-float ir3val;
+float ir3ADC[10];
+float mair3;
+float  lf = 0;
 
 float irSensor4 = A4;
-float ir4ADC;
-float ir4val;
-
-float  fl = 0; //setup modifers
-float  fr = 0;
-float  lf = 0;
+float ir4ADC[10];
+float mair4;
 float  lr = 0;
+
+
+
 
 
 //------------- Gyro variables----------------------------
@@ -177,6 +158,28 @@ float Y = 0; //from ultrasonic
 
 //end of our code ---------------------------------------------------
 
+void setup(void)
+{
+  turret_motor.attach(11);
+  pinMode(LED_BUILTIN, OUTPUT);
+
+  // The Trigger pin will tell the sensor to range find
+  pinMode(TRIG_PIN, OUTPUT);
+  digitalWrite(TRIG_PIN, LOW);
+
+  // Setup the Serial port and pointer, the pointer allows switching the debug info through the USB port(Serial) or Bluetooth port(Serial1) with ease.
+  SerialCom = &Serial;
+  //SerialCom->begin(115200);
+  Serial1.begin(9600);
+  SerialCom->println("MECHENG706_Base_Code_25/01/2018");
+  delay(1000);
+  SerialCom->println("Setup....");
+
+  for (int i = 0; i < 10; i++){
+    measure();
+  }
+ 
+}
 
 
 void loop(void) //main loop
@@ -413,33 +416,43 @@ void reset () {
 
 void measure () {
 
-  ir1ADC = analogRead(irSensor1);
-  ir1val = 0 - pow(ir1ADC, 3) * 0.000004 + pow(ir1ADC, 2) * 0.0056 - ir1ADC * 2.9377 + 708.67;
+/*
+  ir1ADC[index] = analogRead(irSensor1);
+  mair1 = movingAverage(ir1ADC);
+  fl = 0 - pow(mair1, 3) * 0.000004 + pow(mair1, 2) * 0.0056 - mair1 * 2.9377 + 708.67;
 
-  ir2ADC = analogRead(irSensor2 );
-  ir2val = 0 - pow(ir2ADC, 3) * 0.000005 + pow(ir2ADC, 2) * 0.0072 - ir2ADC * 3.7209 + 831.08;
+  ir2ADC[index] = analogRead(irSensor2 );
+  mair2 = movingAverage(ir2ADC);
+  fr = 0 - pow(mair2, 3) * 0.000005 + pow(mair2, 2) * 0.0072 - mair2 * 3.7209 + 831.08;
 
-  ir3ADC = analogRead(irSensor3);
-  ir3val = - pow(ir3ADC, 3) * 0.00002456 + pow(ir3ADC, 2) * 0.0211 - ir3ADC * 6.1377 + 745.7;
+*/
 
-  ir4ADC = analogRead(irSensor4);
-  ir4val = - pow(ir4ADC, 3) * 0.00001452 + pow(ir4ADC, 2) * 0.0124 - ir4ADC * 3.7308 + 525.54;
+  ir3ADC[index] = analogRead(irSensor3);
+  Serial1.println(ir3ADC[index]);
+  mair3 = movingAverage(ir3ADC);
+  Serial1.println(mair3);
+  lf = 0 - pow(mair3, 3) * 0.00002456 + pow(mair3, 2) * 0.0211 - mair3 * 6.1377 + 745.7;
 
-  HC_SR04_range(); //caluclating distance ultra
 
-  fl = ir1val; //setting sensors
-  fr = ir2val;
-  lf = ir3val;
-  lr = ir4val;
+  ir4ADC[index] = analogRead(irSensor4);
+  mair4 = movingAverage(ir4ADC);
+  lr = 0 - pow(mair4, 3) * 0.00001452 + pow(mair4, 2) * 0.0124 - mair4 * 3.7308 + 525.54;
 
-  Y = mm;
+  index++;
+  if (index > 9) {
+    index = 0;
+  }
+
+  //HC_SR04_range(); //caluclating distance ultra
+  //Y = mm;
 }
 
-void readGyro() { //tom
+void readGyro() {
   gyroRate = (analogRead(gyroSensor) * gyroSupplyVoltage) / 1023;
 
   // find the voltage offset the value of voltage when gyro is zero (still)
   gyroRate -= (gyroZeroVoltage / 1023 * gyroSupplyVoltage);
+  
   // read out voltage divided the gyro sensitivity to calculate the angular velocity
   float angularVelocity = gyroRate / gyroSensitivity; // from Data Sheet, gyroSensitivity is 0.007 V/dps
 
@@ -447,9 +460,7 @@ void readGyro() { //tom
 
   if (angularVelocity >= rotationThreshold || angularVelocity <= -rotationThreshold) {
     // we are running a loop in T (of T/1000 second).
-    //T = millis() - T;
     float angleChange = angularVelocity / (1000 / T);
-    //T = millis();
     currentAngle += angleChange;
   }
 
@@ -467,7 +478,7 @@ void readGyro() { //tom
 
   //Serial.print(angularVelocity);
   //Serial.print(" ");
-  Serial.println(currentAngle);
+  //Serial.println(currentAngle);
   delay(T);
 }
 
@@ -705,4 +716,14 @@ void stop() //Stop
   left_rear_motor.writeMicroseconds(1500);
   right_rear_motor.writeMicroseconds(1500);
   right_font_motor.writeMicroseconds(1500);
+}
+
+
+float movingAverage(float irArray[10]) {
+  float sum = 0;
+  for (int i = 0; i < 10; i++) {
+    sum += irArray[i];
+  }
+  float ma = sum / 10;
+  return ma;
 }
