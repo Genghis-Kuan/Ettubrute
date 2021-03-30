@@ -67,10 +67,10 @@ int pos = 0;
 // --------------------- OUR CODE -------------------------
 
 //setting up of the controller
-float kpHomeStraight = 4.5;
-float kiHomeStraight = 0.08;
-float kpHomeStrafe = 4.5;
-float kiHomeStrafe = 0.05;
+float kpHomeStraight = 3.420;
+float kiHomeStraight = 0.069;
+float kpHomeStrafe = 2.420;
+float kiHomeStrafe = 0.0420;
 
 float kpDriveY = 2;
 float kiDriveY = 0.05;
@@ -82,8 +82,8 @@ float kiRotate = 0.05;
 float over = 20; //
 
 //this is the range the error has to be in to be able to exit
-float toleranceParallel = 4;
-float toleranceX = 4;
+float toleranceParallel = 1;
+float toleranceX = 1;
 float toleranceY = 10;
 float toleranceAngle = 3;
 float toleranceRotate = 5;
@@ -92,16 +92,13 @@ int scenario = 1; //scenario decides the beginning case
 
 //other variables used
 float error = 0;
-float errorS = 0;
 float integral = 0;
 float power = 0;
-float powerS = 0;
 float u = 0;
 float angle = 90;
 
 int count = 0;
 int end = 0;
-int endS = 0;
 int rotations = 0;
 
 //set up IR sensors, ultra sonic and gyro
@@ -252,43 +249,40 @@ void home() { //alligns the robot at the beginning and zeros the gyro
   do { //rotate
 
     measure(); //measures all the sensors
-
+  
+  if (lf > 200) {
+    power = 150;
+  error = 5; // Stop it exiting due to lack of 'error'
+  } else {
     error = lf - lr;
     power = controller(error, kpHomeStraight, kiHomeStraight);
-  
-    errorS = 150 - lf;
-    powerS = controller(errorS, kpHomeStrafe, kiHomeStrafe);
-  
-
-    left_font_motor.writeMicroseconds(1500 - power + powerS); //kinematics would fix this?
-    left_rear_motor.writeMicroseconds(1500 - power - powerS);
-    right_rear_motor.writeMicroseconds(1500 - power - powerS);
-    right_font_motor.writeMicroseconds(1500 - power + powerS);
+  }
+    left_font_motor.writeMicroseconds(1500 - power); //kinematics would fix this?
+    left_rear_motor.writeMicroseconds(1500 - power);
+    right_rear_motor.writeMicroseconds(1500 - power);
+    right_font_motor.writeMicroseconds(1500 - power);
 
     end = endCondition(error, end, toleranceParallel); //accounts for overshoot endCondition(error, end, tol);
-    endS = endCondition(errorS, endS, toleranceX);
-
-  } while (end < 20 && endS < 20); //overshoot protection
+  } while (end < 10); //overshoot protection
 
   gyroSet(); //set up
-
   reset();
 
- // do { //strafe
+  do { //strafe
 
- //   measure();
+    measure();
 
-//    error = 150 - lf;
- //   power = controller(error, kpHomeStrafe, kiHomeStrafe);
+    error = 150 - lf;
+    power = controller(error, kpHomeStrafe, kiHomeStrafe);
 
-//    left_font_motor.writeMicroseconds(1500 + power); //kinematics would fix this?
- //   left_rear_motor.writeMicroseconds(1500 - power);
-////    right_rear_motor.writeMicroseconds(1500 - power);
- //   right_font_motor.writeMicroseconds(1500 + power);
+    left_font_motor.writeMicroseconds(1500 + power); //kinematics would fix this?
+    left_rear_motor.writeMicroseconds(1500 - power);
+    right_rear_motor.writeMicroseconds(1500 - power);
+    right_font_motor.writeMicroseconds(1500 + power);
 
- //   end = endCondition(error, end, toleranceX); //accounts for overshoot
+    end = endCondition(error, end, toleranceX); //accounts for overshoot
 
- // } while (end < 20);
+  } while (end < 10);
 
   scenario = 2;
 }
@@ -418,9 +412,7 @@ float endCondition(float error, int count, int tolerance) { //accounts for overs
 void reset () {
   count = 0;
   error = 0;
-  errorS = 0;
   end = 0;
-  endS = 0;
 }
 
 
@@ -438,20 +430,20 @@ void measure () {
 */
 
   ir3ADC[index] = analogRead(irSensor3);
-  SerialCom->print(ir3ADC[index]);
+  //SerialCom->print(ir3ADC[index]);
   mair3 = movingAverage(ir3ADC, n);
-  SerialCom->print(' ');
-  SerialCom->println(mair3);
-  SerialCom->println(n);
+  //SerialCom->print(' ');
+  //SerialCom->println(mair3);
+  //SerialCom->println(n);
   lf = 0 - pow(mair3, 3) * 0.00002456 + pow(mair3, 2) * 0.0211 - mair3 * 6.1377 + 745.7;
 
 
   ir4ADC[index] = analogRead(irSensor4);
-  SerialCom->print(ir4ADC[index]);
+  //SerialCom->print(ir4ADC[index]);
   mair4 = movingAverage(ir4ADC, n);
-  SerialCom->print(' ');
-  SerialCom->println(mair4);
-  SerialCom->println(n);
+  //SerialCom->print(' ');
+  //SerialCom->println(mair4);
+  //SerialCom->println(n);
   lr = 0 - pow(mair4, 3) * 0.00001452 + pow(mair4, 2) * 0.0124 - mair4 * 3.7308 + 525.54;
 
   index++;
