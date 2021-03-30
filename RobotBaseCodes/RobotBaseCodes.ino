@@ -82,8 +82,8 @@ float kiRotate = 0.05;
 float over = 20; //
 
 //this is the range the error has to be in to be able to exit
-float toleranceParallel = 1;
-float toleranceX = 1;
+float toleranceParallel = 2;
+float toleranceX = 2;
 float toleranceY = 10;
 float toleranceAngle = 3;
 float toleranceRotate = 5;
@@ -252,7 +252,7 @@ void home() { //alligns the robot at the beginning and zeros the gyro
   
   if (lf > 200) {
     power = 150;
-  error = 5; // Stop it exiting due to lack of 'error'
+  error = 10; // Stop it exiting due to lack of 'error'
   } else {
     error = lf - lr;
     power = controller(error, kpHomeStraight, kiHomeStraight);
@@ -263,7 +263,7 @@ void home() { //alligns the robot at the beginning and zeros the gyro
     right_font_motor.writeMicroseconds(1500 - power);
 
     end = endCondition(error, end, toleranceParallel); //accounts for overshoot endCondition(error, end, tol);
-  } while (end < 10); //overshoot protection
+  } while (end < 5); //overshoot protection
 
   gyroSet(); //set up
   reset();
@@ -282,7 +282,7 @@ void home() { //alligns the robot at the beginning and zeros the gyro
 
     end = endCondition(error, end, toleranceX); //accounts for overshoot
 
-  } while (end < 10);
+  } while (end < 5);
 
   scenario = 2;
 }
