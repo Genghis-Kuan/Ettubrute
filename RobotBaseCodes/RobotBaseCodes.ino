@@ -82,8 +82,8 @@ float kiRotate = 0.05;
 float over = 20; //
 
 //this is the range the error has to be in to be able to exit
-float toleranceParallel = 2;
-float toleranceX = 2;
+float toleranceParallel = 1;
+float toleranceX = 1.2;
 float toleranceY = 10;
 float toleranceAngle = 3;
 float toleranceRotate = 5;
