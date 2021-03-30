@@ -67,14 +67,14 @@ int pos = 0;
 // --------------------- OUR CODE -------------------------
 
 //setting up of the controller
-float kpHomeStraight = 3.420;
-float kiHomeStraight = 0.069;
-float kpHomeStrafe = 2.420;
-float kiHomeStrafe = 0.0420;
+float kpHomeStraight = 2.8;//3.420;
+float kiHomeStraight = 0.06;//0.010;
+float kpHomeStrafe = 4.2;
+float kiHomeStrafe = 0.1;
 
 float kpDriveY = 2;
 float kiDriveY = 0.05;
-float kpDriveStraight = 8;
+float kpDriveStraight = 20;
 
 float kpRotate = 4.5;
 float kiRotate = 0.05;
@@ -82,8 +82,8 @@ float kiRotate = 0.05;
 float over = 20; //
 
 //this is the range the error has to be in to be able to exit
-float toleranceParallel = 1;
-float toleranceX = 1.2;
+float toleranceParallel = 4;
+float toleranceX = 2.5;
 float toleranceY = 10;
 float toleranceAngle = 3;
 float toleranceRotate = 5;
@@ -108,25 +108,25 @@ int rotations = 0;
 //IR4 is Short range rear
 
 int index = 0;
-int n = 1;
+int MASize = 10;
 
 float irSensor1 = A1;
-float ir1ADC[20];
+float ir1ADC[10];
 float mair1;
 float  fl = 0;
 
 float irSensor2 = A2;
-float ir2ADC[20];
+float ir2ADC[10];
 float mair2;
 float  fr = 0;
 
 float irSensor3 = A3;
-float ir3ADC[20];
+float ir3ADC[10];
 float mair3;
 float  lf = 0;
 
 float irSensor4 = A4;
-float ir4ADC[20];
+float ir4ADC[10];
 float mair4;
 float  lr = 0;
 
@@ -172,10 +172,10 @@ void setup(void)
   SerialCom = &Serial;
   SerialCom->begin(115200);
   SerialCom->println("MECHENG706_Base_Code_25/01/2018");
-  delay(1000);
+  //delay(1000);
   SerialCom->println("Setup....");
 
-  for (int i = 0; i < 19; i++){
+  for (int i = 0; i < 10; i++){
     measure();
   }
  
@@ -203,7 +203,7 @@ void loop(void) //main loop
 STATE initialising() {
   //initialising
   SerialCom->println("INITIALISING....");
-  delay(1000); //One second delay to see the serial string "INITIALISING...."
+  //delay(1000); //One second delay to see the serial string "INITIALISING...."
   SerialCom->println("Enabling Motors...");
   enable_motors();
   SerialCom->println("RUNNING STATE...");
@@ -250,12 +250,13 @@ void home() { //alligns the robot at the beginning and zeros the gyro
 
     measure(); //measures all the sensors
   
-  if (lf > 200) {
+  if (lf > 250) {
     power = 150;
-  error = 10; // Stop it exiting due to lack of 'error'
+    error = 10; // Stop it exiting due to lack of 'error'
   } else {
     error = lf - lr;
     power = controller(error, kpHomeStraight, kiHomeStraight);
+ 
   }
     left_font_motor.writeMicroseconds(1500 - power); //kinematics would fix this?
     left_rear_motor.writeMicroseconds(1500 - power);
@@ -263,7 +264,7 @@ void home() { //alligns the robot at the beginning and zeros the gyro
     right_font_motor.writeMicroseconds(1500 - power);
 
     end = endCondition(error, end, toleranceParallel); //accounts for overshoot endCondition(error, end, tol);
-  } while (end < 5); //overshoot protection
+  } while (end < 15); //overshoot protection
 
   gyroSet(); //set up
   reset();
@@ -272,7 +273,7 @@ void home() { //alligns the robot at the beginning and zeros the gyro
 
     measure();
 
-    error = 150 - lf;
+    error = 160 - lf;
     power = controller(error, kpHomeStrafe, kiHomeStrafe);
 
     left_font_motor.writeMicroseconds(1500 + power); //kinematics would fix this?
@@ -282,7 +283,7 @@ void home() { //alligns the robot at the beginning and zeros the gyro
 
     end = endCondition(error, end, toleranceX); //accounts for overshoot
 
-  } while (end < 5);
+  } while (end < 15);
 
   scenario = 2;
 }
@@ -358,7 +359,7 @@ void rotate() {
       measure(); //measures all the sensors
 
       error = lf - lr;
-      power = controller(error, kpHomeStraight, kiHomeStraight);
+      power = controller(error, kpHomeStraight, 0.1);
 
       left_font_motor.writeMicroseconds(1500 - power); //kinematics would fix this?
       left_rear_motor.writeMicroseconds(1500 - power);
@@ -368,6 +369,12 @@ void rotate() {
       end = endCondition(error, end, toleranceParallel); //accounts for overshoot endCondition(error, end, tol);
 
     } while (end < 15); //overshoot protection
+
+  
+
+
+
+
 
     rotations++;
     scenario = 2;
@@ -385,6 +392,9 @@ void rotate() {
 float controller(float error, float kp, float ki) {
 
   if (abs(error) > over) {  //stops integral affecting power till small error
+    integral = 0;
+  }
+  else if (abs(error) < 2){
     integral = 0;
   }
   integral = integral + error;
@@ -431,7 +441,7 @@ void measure () {
 
   ir3ADC[index] = analogRead(irSensor3);
   //SerialCom->print(ir3ADC[index]);
-  mair3 = movingAverage(ir3ADC, n);
+  mair3 = movingAverage(ir3ADC);
   //SerialCom->print(' ');
   //SerialCom->println(mair3);
   //SerialCom->println(n);
@@ -440,17 +450,14 @@ void measure () {
 
   ir4ADC[index] = analogRead(irSensor4);
   //SerialCom->print(ir4ADC[index]);
-  mair4 = movingAverage(ir4ADC, n);
+  mair4 = movingAverage(ir4ADC);
   //SerialCom->print(' ');
   //SerialCom->println(mair4);
   //SerialCom->println(n);
   lr = 0 - pow(mair4, 3) * 0.00001452 + pow(mair4, 2) * 0.0124 - mair4 * 3.7308 + 525.54;
 
   index++;
-  if (n < 20) {
-    n++;
-  }
-  if (index > 19) {
+  if (index > 10-1) {
     index = 0;
   }
 
@@ -505,12 +512,12 @@ void gyroSet () {
   gyroZeroVoltage = sum / 100; // average the sum as the zero drifting
 }
 
-float movingAverage(float irArray[20], int n) {
+float movingAverage(float irArray[10]) {
   float sum = 0;
-  for (int i = 0; i < 20; i++) {
+  for (int i = 0; i < 10; i++) {
     sum += irArray[i];
   }
-  float ma = sum / n;
+  float ma = sum / 10;
   return ma;
 }
 
