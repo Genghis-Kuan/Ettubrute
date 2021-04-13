@@ -68,16 +68,16 @@ int pos = 0;
 
 //setting up of the controller
 float kpHomeStraight = 2.8;//3.420;
-float kiHomeStraight = 0.06;//0.010;
+float kiHomeStraight = 0.1;//0.010;
 float kpHomeStrafe = 4.2;
-float kiHomeStrafe = 0.1;
+float kiHomeStrafe = 0.06;
 
 float kpDriveY = 2;
 float kiDriveY = 0.05;
 float kpDriveStraight = 20;
 
 float kpRotate = 4.5;
-float kiRotate = 0.05;
+float kiRotate = 0.1;
 
 float over = 20; //
 
@@ -273,7 +273,7 @@ void home() { //alligns the robot at the beginning and zeros the gyro
 
     measure();
 
-    error = 160 - lf;
+    error = 150 - lf;
     power = controller(error, kpHomeStrafe, kiHomeStrafe);
 
     left_font_motor.writeMicroseconds(1500 + power); //kinematics would fix this?
@@ -401,7 +401,7 @@ float controller(float error, float kp, float ki) {
 
   u = kp * error + ki * integral;
 
-  power = constrain(u, -300, 300); //motor saftey
+  power = constrain(u, -350, 350); //motor saftey
 
   //delay(1); //appears to help?
   return power;
