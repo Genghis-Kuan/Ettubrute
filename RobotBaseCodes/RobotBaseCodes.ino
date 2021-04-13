@@ -74,7 +74,7 @@ float kiHomeStrafe = 0.06;
 
 float kpDriveY = 2;
 float kiDriveY = 0.05;
-float kpDriveStraight = 20;
+float kpDriveStraight = 18;
 
 float kpRotate = 4.5;
 float kiRotate = 0.1;
@@ -359,7 +359,7 @@ void rotate() {
       measure(); //measures all the sensors
 
       error = lf - lr;
-      power = controller(error, kpHomeStraight, 0.1);
+      power = controller(error, kpHomeStraight, 0.15);
 
       left_font_motor.writeMicroseconds(1500 - power); //kinematics would fix this?
       left_rear_motor.writeMicroseconds(1500 - power);
@@ -370,8 +370,7 @@ void rotate() {
 
     } while (end < 15); //overshoot protection
 
-  
-
+      reset();
 
 
 
@@ -401,7 +400,7 @@ float controller(float error, float kp, float ki) {
 
   u = kp * error + ki * integral;
 
-  power = constrain(u, -350, 350); //motor saftey
+  power = constrain(u, -400, 400); //motor saftey
 
   //delay(1); //appears to help?
   return power;
