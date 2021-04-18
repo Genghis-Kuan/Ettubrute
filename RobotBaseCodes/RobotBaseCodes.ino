@@ -40,7 +40,6 @@ const byte left_rear = 47;
 const byte right_rear = 50;
 const byte right_front = 51;
 
-
 //Default ultrasonic ranging sensor pins, these pins are defined my the Shield
 const int TRIG_PIN = 48;
 const int ECHO_PIN = 49;
@@ -48,27 +47,25 @@ const int ECHO_PIN = 49;
 // Anything over 400 cm (23200 us pulse) is "out of range". Hit:If you decrease to this the ranging sensor but the timeout is short, you may not need to read up to 4meters.
 const unsigned int MAX_DIST = 23200;
 
-Servo left_font_motor;  // create servo object to control Vex Motor Controller 29
-Servo left_rear_motor;  // create servo object to control Vex Motor Controller 29
-Servo right_rear_motor;  // create servo object to control Vex Motor Controller 29
-Servo right_font_motor;  // create servo object to control Vex Motor Controller 29
+Servo left_font_motor; // create servo object to control Vex Motor Controller 29
+Servo left_rear_motor; // create servo object to control Vex Motor Controller 29
+Servo right_rear_motor; // create servo object to control Vex Motor Controller 29
+Servo right_font_motor; // create servo object to control Vex Motor Controller 29
 Servo turret_motor;
-
 
 float speed_val = 0;
 float speed_change;
 
-
 //Serial Pointer
-HardwareSerial *SerialCom;
+HardwareSerial * SerialCom;
 
 int pos = 0;
 
 // --------------------- OUR CODE -------------------------
 
 //setting up of the controller
-float kpHomeStraight = 2.8;//3.420;
-float kiHomeStraight = 0.1;//0.010;
+float kpHomeStraight = 2.8;
+float kiHomeStraight = 0.1;
 float kpHomeStrafe = 4.2;
 float kiHomeStrafe = 0.06;
 
@@ -79,7 +76,7 @@ float kpDriveStraight = 18;
 float kpRotate = 4.5;
 float kiRotate = 0.1;
 
-float over = 20; //
+float over = 20;
 
 //this is the range the error has to be in to be able to exit
 float toleranceParallel = 4;
@@ -113,26 +110,22 @@ int MASize = 10;
 float irSensor1 = A1;
 float ir1ADC[10];
 float mair1;
-float  fl = 0;
+float fl = 0;
 
 float irSensor2 = A2;
 float ir2ADC[10];
 float mair2;
-float  fr = 0;
+float fr = 0;
 
 float irSensor3 = A3;
 float ir3ADC[10];
 float mair3;
-float  lf = 0;
+float lf = 0;
 
 float irSensor4 = A4;
 float ir4ADC[10];
 float mair4;
-float  lr = 0;
-
-
-
-
+float lr = 0;
 
 //------------- Gyro variables----------------------------
 
@@ -154,13 +147,10 @@ float mm = 0;
 
 //My globals
 float Y = 0; //from ultrasonic
-//float sensDist[] = {83.1, 103.64}; //distance between sensors X then Y
-
 
 //end of our code ---------------------------------------------------
 
-void setup(void)
-{
+void setup(void) {
   turret_motor.attach(11);
   pinMode(LED_BUILTIN, OUTPUT);
 
@@ -169,44 +159,42 @@ void setup(void)
   digitalWrite(TRIG_PIN, LOW);
 
   // Setup the Serial port and pointer, the pointer allows switching the debug info through the USB port(Serial) or Bluetooth port(Serial1) with ease.
-  SerialCom = &Serial;
-  SerialCom->begin(115200);
-  SerialCom->println("MECHENG706_Base_Code_25/01/2018");
+  SerialCom = & Serial;
+  SerialCom -> begin(115200);
+  SerialCom -> println("MECHENG706_Base_Code_25/01/2018");
   //delay(1000);
-  SerialCom->println("Setup....");
+  SerialCom -> println("Setup....");
 
-  for (int i = 0; i < 10; i++){
+  for (int i = 0; i < 10; i++) {
     measure();
   }
- 
-}
 
+}
 
 void loop(void) //main loop
 {
   static STATE machine_state = INITIALISING;
   //Finite-state machine Code
   switch (machine_state) {
-    case INITIALISING:
-      machine_state = initialising();
-      break;
-    case RUNNING: //Lipo Battery Volage OK
-      machine_state =  running();
-      break;
-    case STOPPED: //Stop of Lipo Battery voltage is too low, to protect Battery
-      machine_state =  stopped();
-      break;
+  case INITIALISING:
+    machine_state = initialising();
+    break;
+  case RUNNING: //Lipo Battery Volage OK
+    machine_state = running();
+    break;
+  case STOPPED: //Stop of Lipo Battery voltage is too low, to protect Battery
+    machine_state = stopped();
+    break;
   };
 }
 
-
 STATE initialising() {
   //initialising
-  SerialCom->println("INITIALISING....");
+  SerialCom -> println("INITIALISING....");
   //delay(1000); //One second delay to see the serial string "INITIALISING...."
-  SerialCom->println("Enabling Motors...");
+  SerialCom -> println("Enabling Motors...");
   enable_motors();
-  SerialCom->println("RUNNING STATE...");
+  SerialCom -> println("RUNNING STATE...");
   return RUNNING;
 }
 
@@ -214,195 +202,170 @@ STATE running() {
 
   fast_flash_double_LED_builtin(); //theirs
 
-#ifndef NO_BATTERY_V_OK
+  #ifndef NO_BATTERY_V_OK
   if (!is_battery_voltage_OK()) return STOPPED;
-#endif
+  #endif
 
   //code begins -------------------------------------------------------------------------------------------
 
   switch (scenario) {
-    case 1: //ALIGNING
-      home();
-      break;
-    case 2: //OPERATING
-      drive();
-      break;
-    case 3: //Rotating
-      rotate();
-      break;
-    case 4: //stop everything       //remove if using pc comands
-      stop();
+  case 1: //ALIGNING
+    home();
+    break;
+  case 2: //OPERATING
+    drive();
+    break;
+  case 3: //Rotating
+    rotate();
+    break;
+  case 4: //stop everything       //remove if using pc comands
+    stop();
   }
-
   //end of my code -------------------------------------------------------------------------------------------------
-
 
   return RUNNING;
 }
 
-//MY FUNCTIONS Boi
+//functions
+void home() { //aligns the robot at the beginning and zeros the gyro
 
-void home() { //alligns the robot at the beginning and zeros the gyro
-
-  reset(); //resets vraible to 0
+  reset(); //resets  reused variables to 0
 
   do { //rotate
 
     measure(); //measures all the sensors
-  
-  if (lf > 250) {
-    power = 150;
-    error = 10; // Stop it exiting due to lack of 'error'
-  } else {
-    error = lf - lr;
-    power = controller(error, kpHomeStraight, kiHomeStraight);
- 
-  }
-    left_font_motor.writeMicroseconds(1500 - power); //kinematics would fix this?
+
+    if (lf > 250) { //assumes if the sensor range is far that it is needs to be rotated ccw
+
+      power = 150;
+      error = 10; //stop it exiting due to lack of 'error'
+    } else {
+
+      error = lf - lr;
+      power = controller(error, kpHomeStraight, kiHomeStraight);
+    }
+
+    left_font_motor.writeMicroseconds(1500 - power); //mechanuum kinematics
     left_rear_motor.writeMicroseconds(1500 - power);
     right_rear_motor.writeMicroseconds(1500 - power);
     right_font_motor.writeMicroseconds(1500 - power);
-
-    end = endCondition(error, end, toleranceParallel); //accounts for overshoot endCondition(error, end, tol);
+    end = endCondition(error, end, toleranceParallel); //accounts for overshoot
   } while (end < 15); //overshoot protection
 
-  gyroSet(); //set up
+  gyroSet(); //when 'homed' set the gyro to 0
   reset();
 
-  do { //strafe
+  do { //strafe to align with the left wall
 
     measure();
-
     error = 150 - lf;
     power = controller(error, kpHomeStrafe, kiHomeStrafe);
 
-    left_font_motor.writeMicroseconds(1500 + power); //kinematics would fix this?
+    left_font_motor.writeMicroseconds(1500 + power); //mechanuum kinematics
     left_rear_motor.writeMicroseconds(1500 - power);
     right_rear_motor.writeMicroseconds(1500 - power);
     right_font_motor.writeMicroseconds(1500 + power);
-
     end = endCondition(error, end, toleranceX); //accounts for overshoot
-
   } while (end < 15);
 
-  scenario = 2;
+  scenario = 2; //state machine incrementer
 }
 
-void drive() {
+void drive() { //drives forward while keeping 150mm from the left wall, stops when 150mm from the front wall
 
   float xerror = 0;
-  float dX = 0;
   int fix = 1;
+  float dX = 0; //needed for derivative control
   reset();
 
-  do { //forwards
+  do {
 
     measure();
-
-    error = 150 - Y;
+    error = 150 - Y; //error from the front facing ultrasonic sensor
     power = controller(error, kpDriveY, kiDriveY);
 
     xerror = 150 - lf + lr - lf; //keeping it straight
     dX = kpDriveStraight * xerror * fix;
-    dX = constrain(dX, -200, 200); //stops the glitch half way through where rotaion power cancelled out forward power
+    dX = constrain(dX, -200, 200); //motor protection
 
-    if (abs(error) < 30) {    //stops the wackness at the end where it rotates randomly
+    if (abs(error) < 30) { //stops the wackness at the end where it rotates randomly
       fix = 0;
     }
-
-    left_font_motor.writeMicroseconds(1500 - power + dX); //kinematics would fix this?
+    left_font_motor.writeMicroseconds(1500 - power + dX); //mechanuum kinematics
     left_rear_motor.writeMicroseconds(1500 - power + dX);
     right_rear_motor.writeMicroseconds(1500 + power + dX);
     right_font_motor.writeMicroseconds(1500 + power + dX);
-
     end = endCondition(error, end, toleranceY); //accounts for overshoot
 
   } while (end < 15);
 
-  scenario = 3;
+  scenario = 3; //state machine incrementer
 }
 
 void rotate() {
 
+  float addon = 0;
   reset();
 
-  float addon = 0;
-  if (rotations < 3) {
+  if (rotations < 3) { //correct amount of rotations to finish the course
 
     do {
 
       readGyro();
-
       if (currentAngle > 330) {
+
         addon = (360 - currentAngle);
         currentAngle = 0;
-      }
-      else {
+      } else {
         addon = 0;
       }
 
       error = angle - (currentAngle + addon);
       power = controller(error, kpRotate, kiRotate);
 
-
-      left_font_motor.writeMicroseconds(1500 + power); //kinematics would fix this?
+      left_font_motor.writeMicroseconds(1500 + power); //mechanuum kinematics
       left_rear_motor.writeMicroseconds(1500 + power);
       right_rear_motor.writeMicroseconds(1500 + power);
       right_font_motor.writeMicroseconds(1500 + power);
 
-    } while (error > 5); // get within 5 degrees
+    } while (error > 5); //get within 5 degrees
 
-    reset(); //resets vraible to 0
+    reset();
 
-    do { //rotate
+    do {
 
       measure(); //measures all the sensors
 
       error = lf - lr;
       power = controller(error, kpHomeStraight, 0.15);
 
-      left_font_motor.writeMicroseconds(1500 - power); //kinematics would fix this?
+      left_font_motor.writeMicroseconds(1500 - power); //mechanuum kinematics
       left_rear_motor.writeMicroseconds(1500 - power);
       right_rear_motor.writeMicroseconds(1500 - power);
       right_font_motor.writeMicroseconds(1500 - power);
-
       end = endCondition(error, end, toleranceParallel); //accounts for overshoot endCondition(error, end, tol);
-
     } while (end < 15); //overshoot protection
 
-      reset();
-
-
-
-
+    reset();
     rotations++;
     scenario = 2;
-
   } else {
     scenario = 4;
   }
-  angle += 80;
-
+  angle += 80; //keeps track of the predicted angle of the robot (with 10 deg tolerance)
 }
-
-
-//Helper functions
 
 float controller(float error, float kp, float ki) {
 
-  if (abs(error) > over) {  //stops integral affecting power till small error
+  if (abs(error) > over) { //prevents integral windup
+    integral = 0;
+  } else if (abs(error) < 2) {
     integral = 0;
   }
-  else if (abs(error) < 2){
-    integral = 0;
-  }
+
   integral = integral + error;
-
   u = kp * error + ki * integral;
-
   power = constrain(u, -400, 400); //motor saftey
-
-  //delay(1); //appears to help?
   return power;
 }
 
@@ -411,112 +374,102 @@ float endCondition(float error, int count, int tolerance) { //accounts for overs
 
   if (abs(error) <= tolerance) { //if its within the tolerance start counting
     count = count + 1;
-  }
-  else { //if it leaves the tolerance reset the counter
+  } else { //if it leaves the tolerance reset the counter
     count = 0;
   }
+
   return count;
 }
 
-void reset () {
+void reset() { //resets certain values so they can be used by other functions
+
   count = 0;
   error = 0;
   end = 0;
+
 }
 
+void measure() {
 
-void measure () {
+  /* for project 2
+    ir1ADC[index] = analogRead(irSensor1);
+    mair1 = movingAverage(ir1ADC);
+    fl = 0 - pow(mair1, 3) * 0.000004 + pow(mair1, 2) * 0.0056 - mair1 * 2.9377 + 708.67;
 
-/*
-  ir1ADC[index] = analogRead(irSensor1);
-  mair1 = movingAverage(ir1ADC);
-  fl = 0 - pow(mair1, 3) * 0.000004 + pow(mair1, 2) * 0.0056 - mair1 * 2.9377 + 708.67;
+    ir2ADC[index] = analogRead(irSensor2 );
+    mair2 = movingAverage(ir2ADC);
+    fr = 0 - pow(mair2, 3) * 0.000005 + pow(mair2, 2) * 0.0072 - mair2 * 3.7209 + 831.08;
 
-  ir2ADC[index] = analogRead(irSensor2 );
-  mair2 = movingAverage(ir2ADC);
-  fr = 0 - pow(mair2, 3) * 0.000005 + pow(mair2, 2) * 0.0072 - mair2 * 3.7209 + 831.08;
-
-*/
+  */
 
   ir3ADC[index] = analogRead(irSensor3);
-  //SerialCom->print(ir3ADC[index]);
   mair3 = movingAverage(ir3ADC);
-  //SerialCom->print(' ');
-  //SerialCom->println(mair3);
-  //SerialCom->println(n);
   lf = 0 - pow(mair3, 3) * 0.00002456 + pow(mair3, 2) * 0.0211 - mair3 * 6.1377 + 745.7;
 
-
   ir4ADC[index] = analogRead(irSensor4);
-  //SerialCom->print(ir4ADC[index]);
   mair4 = movingAverage(ir4ADC);
-  //SerialCom->print(' ');
-  //SerialCom->println(mair4);
-  //SerialCom->println(n);
   lr = 0 - pow(mair4, 3) * 0.00001452 + pow(mair4, 2) * 0.0124 - mair4 * 3.7308 + 525.54;
 
   index++;
-  if (index > 10-1) {
+
+  if (index > 9) {
     index = 0;
   }
 
-  HC_SR04_range(); //caluclating distance ultra
+  HC_SR04_range(); //returns the ultrasonic sensor measurement
   Y = mm;
 }
 
 void readGyro() {
-  gyroRate = (analogRead(gyroSensor) * gyroSupplyVoltage) / 1023;
 
+  gyroRate = (analogRead(gyroSensor) * gyroSupplyVoltage) / 1023;
   // find the voltage offset the value of voltage when gyro is zero (still)
   gyroRate -= (gyroZeroVoltage / 1023 * gyroSupplyVoltage);
-  
+
   // read out voltage divided the gyro sensitivity to calculate the angular velocity
   float angularVelocity = gyroRate / gyroSensitivity; // from Data Sheet, gyroSensitivity is 0.007 V/dps
-
   // if the angular velocity is less than the threshold, ignore it
 
   if (angularVelocity >= rotationThreshold || angularVelocity <= -rotationThreshold) {
     // we are running a loop in T (of T/1000 second).
     float angleChange = angularVelocity / (1000 / T);
     currentAngle += angleChange;
+
   }
 
   // keep the angle between 0-360
-
-
-  if (currentAngle < 0)
-  {
+  if (currentAngle < 0) {
     currentAngle += 360;
-  }
-  else if (currentAngle > 359)
-  {
+  } else if (currentAngle > 359) {
     currentAngle -= 360;
   }
 
-  //Serial.print(angularVelocity);
-  //Serial.print(" ");
-  //Serial.println(currentAngle);
   delay(T);
 }
 
-void gyroSet () {
-  //Setup gyro
+void gyroSet() {
+
   float sum = 0;
-  for (int i = 0; i < 100; i++) // read 100 values of voltage when gyro is at still, to calculate the zero-drift.
-  {
+  for (int i = 0; i < 100; i++) { // read 100 values of voltage when gyro is at still, to calculate the zero-drift.
+
     gyroSignalADC = analogRead(gyroSensor);
     sum += gyroSignalADC;
     delay(5);
   }
+
   gyroZeroVoltage = sum / 100; // average the sum as the zero drifting
 }
 
 float movingAverage(float irArray[10]) {
+
   float sum = 0;
+  float ma = 0;
   for (int i = 0; i < 10; i++) {
+
     sum += irArray[i];
   }
-  float ma = sum / 10;
+
+  ma = sum / 10;
   return ma;
 }
 
@@ -532,32 +485,29 @@ STATE stopped() {
 
   if (millis() - previous_millis > 500) { //print massage every 500ms
     previous_millis = millis();
-    SerialCom->println("STOPPED---------");
+    SerialCom -> println("STOPPED---------");
 
-
-#ifndef NO_BATTERY_V_OK
+    #ifndef NO_BATTERY_V_OK
     //500ms timed if statement to check lipo and output speed settings
     if (is_battery_voltage_OK()) {
-      SerialCom->print("Lipo OK waiting of voltage Counter 10 < ");
-      SerialCom->println(counter_lipo_voltage_ok);
+      SerialCom -> print("Lipo OK waiting of voltage Counter 10 < ");
+      SerialCom -> println(counter_lipo_voltage_ok);
       counter_lipo_voltage_ok++;
       if (counter_lipo_voltage_ok > 10) { //Making sure lipo voltage is stable
         counter_lipo_voltage_ok = 0;
         enable_motors();
-        SerialCom->println("Lipo OK returning to RUN STATE");
+        SerialCom -> println("Lipo OK returning to RUN STATE");
         return RUNNING;
       }
-    } else
-    {
+    } else {
       counter_lipo_voltage_ok = 0;
     }
-#endif
+    #endif
   }
   return STOPPED;
 }
 
-void fast_flash_double_LED_builtin()
-{
+void fast_flash_double_LED_builtin() {
   static byte indexer = 0;
   static unsigned long fast_flash_millis;
   if (millis() > fast_flash_millis) {
@@ -573,8 +523,7 @@ void fast_flash_double_LED_builtin()
   }
 }
 
-void slow_flash_LED_builtin()
-{
+void slow_flash_LED_builtin() {
   static unsigned long slow_flash_millis;
   if (millis() - slow_flash_millis > 2000) {
     slow_flash_millis = millis();
@@ -582,8 +531,7 @@ void slow_flash_LED_builtin()
   }
 }
 
-void speed_change_smooth()
-{
+void speed_change_smooth() {
   speed_val += speed_change;
   if (speed_val > 1000)
     speed_val = 1000;
@@ -591,8 +539,7 @@ void speed_change_smooth()
 }
 
 #ifndef NO_BATTERY_V_OK
-boolean is_battery_voltage_OK()
-{
+boolean is_battery_voltage_OK() {
   static byte Low_voltage_counter;
   static unsigned long previous_millis;
 
@@ -608,24 +555,24 @@ boolean is_battery_voltage_OK()
 
   if (Lipo_level_cal > 0 && Lipo_level_cal < 160) {
     previous_millis = millis();
-    SerialCom->print("Lipo level:");
-    SerialCom->print(Lipo_level_cal);
-    SerialCom->print("%");
+    SerialCom -> print("Lipo level:");
+    SerialCom -> print(Lipo_level_cal);
+    SerialCom -> print("%");
     // SerialCom->print(" : Raw Lipo:");
     // SerialCom->println(raw_lipo);
-    SerialCom->println("");
+    SerialCom -> println("");
     Low_voltage_counter = 0;
     return true;
   } else {
     if (Lipo_level_cal < 0)
-      SerialCom->println("Lipo is Disconnected or Power Switch is turned OFF!!!");
+      SerialCom -> println("Lipo is Disconnected or Power Switch is turned OFF!!!");
     else if (Lipo_level_cal > 160)
-      SerialCom->println("!Lipo is Overchanged!!!");
+      SerialCom -> println("!Lipo is Overchanged!!!");
     else {
-      SerialCom->println("Lipo voltage too LOW, any lower and the lipo with be damaged");
-      SerialCom->print("Please Re-charge Lipo:");
-      SerialCom->print(Lipo_level_cal);
-      SerialCom->println("%");
+      SerialCom -> println("Lipo voltage too LOW, any lower and the lipo with be damaged");
+      SerialCom -> print("Please Re-charge Lipo:");
+      SerialCom -> print(Lipo_level_cal);
+      SerialCom -> println("%");
     }
 
     Low_voltage_counter++;
@@ -638,14 +585,12 @@ boolean is_battery_voltage_OK()
 }
 #endif
 
-#ifndef NO_HC-SR04
-void HC_SR04_range()
-{
+#ifndef NO_HC - SR04
+void HC_SR04_range() {
   unsigned long t1;
   unsigned long t2;
   unsigned long pulse_width;
   float cm;
-
 
   // Hold the trigger pin high for at least 10 us
   digitalWrite(TRIG_PIN, HIGH);
@@ -654,11 +599,11 @@ void HC_SR04_range()
 
   // Wait for pulse on echo pin
   t1 = micros();
-  while ( digitalRead(ECHO_PIN) == 0 ) {
+  while (digitalRead(ECHO_PIN) == 0) {
     t2 = micros();
     pulse_width = t2 - t1;
-    if ( pulse_width > (MAX_DIST + 1000)) {
-      SerialCom->println("HC-SR04: NOT found");
+    if (pulse_width > (MAX_DIST + 1000)) {
+      SerialCom -> println("HC-SR04: NOT found");
       return;
     }
   }
@@ -667,12 +612,11 @@ void HC_SR04_range()
   // Note: the micros() counter will overflow after ~70 min
 
   t1 = micros();
-  while ( digitalRead(ECHO_PIN) == 1)
-  {
+  while (digitalRead(ECHO_PIN) == 1) {
     t2 = micros();
     pulse_width = t2 - t1;
-    if ( pulse_width > (MAX_DIST + 1000) ) {
-      SerialCom->println("HC-SR04: Out of range");
+    if (pulse_width > (MAX_DIST + 1000)) {
+      SerialCom -> println("HC-SR04: Out of range");
       return;
     }
   }
@@ -687,40 +631,36 @@ void HC_SR04_range()
   mm = cm * 10;
 
   // Print out results
-  if ( pulse_width > MAX_DIST ) {
+  if (pulse_width > MAX_DIST) {
     //SerialCom->println("HC-SR04: Out of range");
   } else {
-    SerialCom->print("HC-SR04:");
-    SerialCom->print(cm);
-    SerialCom->println("cm");
+    SerialCom -> print("HC-SR04:");
+    SerialCom -> print(cm);
+    SerialCom -> println("cm");
   }
 }
 #endif
 
-void Analog_Range_A4()
-{
-  SerialCom->print("Analog Range A4:");
-  SerialCom->println(analogRead(A4));
+void Analog_Range_A4() {
+  SerialCom -> print("Analog Range A4:");
+  SerialCom -> println(analogRead(A4));
 }
 
 #ifndef NO_READ_GYRO
-void GYRO_reading()
-{
-  SerialCom->print("GYRO A3:");
-  SerialCom->println(analogRead(A3));
+void GYRO_reading() {
+  SerialCom -> print("GYRO A3:");
+  SerialCom -> println(analogRead(A3));
 }
 #endif
-
 
 //----------------------Motor moments------------------------
 //The Vex Motor Controller 29 use Servo Control signals to determine speed and direction, with 0 degrees meaning neutral https://en.wikipedia.org/wiki/Servo_control
 
-void disable_motors()
-{
-  left_font_motor.detach();  // detach the servo on pin left_front to turn Vex Motor Controller 29 Off
-  left_rear_motor.detach();  // detach the servo on pin left_rear to turn Vex Motor Controller 29 Off
-  right_rear_motor.detach();  // detach the servo on pin right_rear to turn Vex Motor Controller 29 Off
-  right_font_motor.detach();  // detach the servo on pin right_front to turn Vex Motor Controller 29 Off
+void disable_motors() {
+  left_font_motor.detach(); // detach the servo on pin left_front to turn Vex Motor Controller 29 Off
+  left_rear_motor.detach(); // detach the servo on pin left_rear to turn Vex Motor Controller 29 Off
+  right_rear_motor.detach(); // detach the servo on pin right_rear to turn Vex Motor Controller 29 Off
+  right_font_motor.detach(); // detach the servo on pin right_front to turn Vex Motor Controller 29 Off
 
   pinMode(left_front, INPUT);
   pinMode(left_rear, INPUT);
@@ -728,12 +668,11 @@ void disable_motors()
   pinMode(right_front, INPUT);
 }
 
-void enable_motors()
-{
-  left_font_motor.attach(left_front);  // attaches the servo on pin left_front to turn Vex Motor Controller 29 On
-  left_rear_motor.attach(left_rear);  // attaches the servo on pin left_rear to turn Vex Motor Controller 29 On
-  right_rear_motor.attach(right_rear);  // attaches the servo on pin right_rear to turn Vex Motor Controller 29 On
-  right_font_motor.attach(right_front);  // attaches the servo on pin right_front to turn Vex Motor Controller 29 On
+void enable_motors() {
+  left_font_motor.attach(left_front); // attaches the servo on pin left_front to turn Vex Motor Controller 29 On
+  left_rear_motor.attach(left_rear); // attaches the servo on pin left_rear to turn Vex Motor Controller 29 On
+  right_rear_motor.attach(right_rear); // attaches the servo on pin right_rear to turn Vex Motor Controller 29 On
+  right_font_motor.attach(right_front); // attaches the servo on pin right_front to turn Vex Motor Controller 29 On
 }
 void stop() //Stop
 {
