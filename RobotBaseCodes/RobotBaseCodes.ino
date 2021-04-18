@@ -70,7 +70,7 @@ float kpHomeStrafe = 4.2;
 float kiHomeStrafe = 0.06;
 
 float kpDriveY = 2;
-float kiDriveY = 0.05;
+float kiDriveY = 0.02;
 float kpDriveStraight = 18;
 
 float kpRotate = 4.5;
@@ -81,11 +81,11 @@ float over = 20;
 //this is the range the error has to be in to be able to exit
 float toleranceParallel = 4;
 float toleranceX = 2.5;
-float toleranceY = 10;
+float toleranceY = 5;
 float toleranceAngle = 3;
 float toleranceRotate = 5;
 
-int scenario = 1; //scenario decides the beginning case
+int scenario = 2; //scenario decides the beginning case
 
 //other variables used
 float error = 0;
@@ -291,6 +291,7 @@ void drive() { //drives forward while keeping 150mm from the left wall, stops wh
     if (abs(error) < 30) { //stops the wackness at the end where it rotates randomly
       fix = 0;
     }
+	
     left_font_motor.writeMicroseconds(1500 - power + dX); //mechanuum kinematics
     left_rear_motor.writeMicroseconds(1500 - power + dX);
     right_rear_motor.writeMicroseconds(1500 + power + dX);
