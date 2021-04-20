@@ -65,13 +65,13 @@ int pos = 0;
 
 //setting up of the controller
 float kpHomeStraight = 2.8;
-float kiHomeStraight = 0.1;
+float kiHomeStraight = 0.06;
 float kpHomeStrafe = 4.2;
 float kiHomeStrafe = 0.06;
 
 float kpDriveY = 2;
-float kiDriveY = 0.02;
-float kpDriveStraight = 18;
+float kiDriveY = 0.05;
+float kpDriveStraight = 20;
 
 float kpRotate = 4.5;
 float kiRotate = 0.1;
@@ -85,7 +85,7 @@ float toleranceY = 5;
 float toleranceAngle = 3;
 float toleranceRotate = 5;
 
-int scenario = 2; //scenario decides the beginning case
+int scenario = 1; //scenario decides the beginning case
 
 //other variables used
 float error = 0;
@@ -273,6 +273,8 @@ void home() { //aligns the robot at the beginning and zeros the gyro
 
 void drive() { //drives forward while keeping 150mm from the left wall, stops when 150mm from the front wall
 
+
+
   float xerror = 0;
   int fix = 1;
   float dX = 0; //needed for derivative control
@@ -285,8 +287,9 @@ void drive() { //drives forward while keeping 150mm from the left wall, stops wh
     power = controller(error, kpDriveY, kiDriveY);
 
     xerror = 150 - lf + lr - lf; //keeping it straight
+    Serial.println(xerror);
     dX = kpDriveStraight * xerror * fix;
-    dX = constrain(dX, -200, 200); //motor protection
+    dX = constrain(dX, -300, 300); //motor protection
 
     if (abs(error) < 30) { //stops the wackness at the end where it rotates randomly
       fix = 0;
@@ -298,7 +301,7 @@ void drive() { //drives forward while keeping 150mm from the left wall, stops wh
     right_font_motor.writeMicroseconds(1500 + power + dX);
     end = endCondition(error, end, toleranceY); //accounts for overshoot
 
-  } while (end < 15);
+  } while (end < 10);
 
   scenario = 3; //state machine incrementer
 }
@@ -353,7 +356,7 @@ void rotate() {
   } else {
     scenario = 4;
   }
-  angle += 80; //keeps track of the predicted angle of the robot (with 10 deg tolerance)
+  angle += 85; //keeps track of the predicted angle of the robot (with 10 deg tolerance)
 }
 
 float controller(float error, float kp, float ki) {
@@ -366,7 +369,7 @@ float controller(float error, float kp, float ki) {
 
   integral = integral + error;
   u = kp * error + ki * integral;
-  power = constrain(u, -400, 400); //motor saftey
+  power = constrain(u, -450, 450); //motor saftey
   return power;
 }
 
