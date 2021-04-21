@@ -65,18 +65,19 @@ int pos = 0;
 
 //setting up of the controller
 float kpHomeStraight = 2.8;
-float kiHomeStraight = 0.06;
+float kiHomeStraight = 0.1;
 float kpHomeStrafe = 4.2;
 float kiHomeStrafe = 0.06;
 
 float kpDriveY = 2;
 float kiDriveY = 0.05;
-float kpDriveStraight = 20;
+float kpDriveStraight = 18;
 
 float kpRotate = 4.5;
 float kiRotate = 0.1;
 
 float over = 20;
+float addon = 0;
 
 //this is the range the error has to be in to be able to exit
 float toleranceParallel = 4;
@@ -85,7 +86,7 @@ float toleranceY = 5;
 float toleranceAngle = 3;
 float toleranceRotate = 5;
 
-int scenario = 1; //scenario decides the beginning case
+int scenario = 4; //scenario decides the beginning case
 
 //other variables used
 float error = 0;
@@ -220,6 +221,12 @@ STATE running() {
     break;
   case 4: //stop everything       //remove if using pc comands
     stop();
+    measure();
+    Serial.print("LF ");
+   Serial.println(lf);
+   Serial.print("LR ");
+   Serial.println(lr);
+   delay(100);
   }
   //end of my code -------------------------------------------------------------------------------------------------
 
@@ -258,7 +265,7 @@ void home() { //aligns the robot at the beginning and zeros the gyro
   do { //strafe to align with the left wall
 
     measure();
-    error = 150 - lf;
+    error = 160 - lf;
     power = controller(error, kpHomeStrafe, kiHomeStrafe);
 
     left_font_motor.writeMicroseconds(1500 + power); //mechanuum kinematics
@@ -279,6 +286,7 @@ void drive() { //drives forward while keeping 150mm from the left wall, stops wh
   int fix = 1;
   float dX = 0; //needed for derivative control
   reset();
+ 
 
   do {
 
@@ -286,8 +294,9 @@ void drive() { //drives forward while keeping 150mm from the left wall, stops wh
     error = 150 - Y; //error from the front facing ultrasonic sensor
     power = controller(error, kpDriveY, kiDriveY);
 
+
+
     xerror = 150 - lf + lr - lf; //keeping it straight
-    Serial.println(xerror);
     dX = kpDriveStraight * xerror * fix;
     dX = constrain(dX, -300, 300); //motor protection
 
@@ -308,7 +317,6 @@ void drive() { //drives forward while keeping 150mm from the left wall, stops wh
 
 void rotate() {
 
-  float addon = 0;
   reset();
 
   if (rotations < 3) { //correct amount of rotations to finish the course
@@ -394,6 +402,7 @@ void reset() { //resets certain values so they can be used by other functions
 }
 
 void measure() {
+
 
   /* for project 2
     ir1ADC[index] = analogRead(irSensor1);
@@ -638,9 +647,9 @@ void HC_SR04_range() {
   if (pulse_width > MAX_DIST) {
     //SerialCom->println("HC-SR04: Out of range");
   } else {
-    SerialCom -> print("HC-SR04:");
-    SerialCom -> print(cm);
-    SerialCom -> println("cm");
+   // SerialCom -> print("HC-SR04:");
+   // SerialCom -> print(cm);
+   // SerialCom -> println("cm");
   }
 }
 #endif
