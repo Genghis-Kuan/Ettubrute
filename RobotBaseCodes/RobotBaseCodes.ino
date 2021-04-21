@@ -65,7 +65,7 @@ int pos = 0;
 
 //setting up of the controller
 float kpHomeStraight = 2.8;
-float kiHomeStraight = 0.1;
+float kiHomeStraight = 0.05;
 float kpHomeStrafe = 4.2;
 float kiHomeStrafe = 0.06;
 
@@ -86,7 +86,7 @@ float toleranceY = 5;
 float toleranceAngle = 3;
 float toleranceRotate = 5;
 
-int scenario = 4; //scenario decides the beginning case
+int scenario = 1; //scenario decides the beginning case
 
 //other variables used
 float error = 0;
