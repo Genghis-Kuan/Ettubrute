@@ -64,10 +64,10 @@ int pos = 0;
 // --------------------- OUR CODE -------------------------
 
 //setting up of the controller
-float kpHomeStraight = 2.8;
-float kiHomeStraight = 0.05;
-float kpHomeStrafe = 4.2;
-float kiHomeStrafe = 0.06;
+float kpHomeStraight = 4;
+float kiHomeStraight = 0.1;
+float kpHomeStrafe = 3.2;
+float kiHomeStrafe = 0.05;
 
 float kpDriveY = 2;
 float kiDriveY = 0.05;
@@ -223,9 +223,9 @@ STATE running() {
     stop();
     measure();
     Serial.print("LF ");
-   Serial.println(lf);
+   Serial.println(mair3);
    Serial.print("LR ");
-   Serial.println(lr);
+   Serial.println(mair4);
    delay(100);
   }
   //end of my code -------------------------------------------------------------------------------------------------
@@ -243,11 +243,9 @@ void home() { //aligns the robot at the beginning and zeros the gyro
     measure(); //measures all the sensors
 
     if (lf > 250) { //assumes if the sensor range is far that it is needs to be rotated ccw
-
       power = 150;
-      error = 10; //stop it exiting due to lack of 'error'
+      error = 10;
     } else {
-
       error = lf - lr;
       power = controller(error, kpHomeStraight, kiHomeStraight);
     }
@@ -257,15 +255,15 @@ void home() { //aligns the robot at the beginning and zeros the gyro
     right_rear_motor.writeMicroseconds(1500 - power);
     right_font_motor.writeMicroseconds(1500 - power);
     end = endCondition(error, end, toleranceParallel); //accounts for overshoot
-  } while (end < 15); //overshoot protection
+  } while (end < 5); //overshoot protection
 
-  gyroSet(); //when 'homed' set the gyro to 0
+  //gyroSet(); //when 'homed' set the gyro to 0
   reset();
 
   do { //strafe to align with the left wall
 
     measure();
-    error = 160 - lf;
+    error = 150 - lf;
     power = controller(error, kpHomeStrafe, kiHomeStrafe);
 
     left_font_motor.writeMicroseconds(1500 + power); //mechanuum kinematics
@@ -273,8 +271,27 @@ void home() { //aligns the robot at the beginning and zeros the gyro
     right_rear_motor.writeMicroseconds(1500 - power);
     right_font_motor.writeMicroseconds(1500 + power);
     end = endCondition(error, end, toleranceX); //accounts for overshoot
-  } while (end < 15);
+  } while (end < 10);
 
+
+    reset(); //resets  reused variables to 0
+
+  do { //rotate
+
+    measure(); //measures all the sensors
+
+
+      error = lf - lr;
+      power = controller(error, kpHomeStraight, kiHomeStraight);
+
+    left_font_motor.writeMicroseconds(1500 - power); //mechanuum kinematics
+    left_rear_motor.writeMicroseconds(1500 - power);
+    right_rear_motor.writeMicroseconds(1500 - power);
+    right_font_motor.writeMicroseconds(1500 - power);
+    end = endCondition(error, end, toleranceParallel); //accounts for overshoot
+  } while (end < 15); //overshoot protection
+
+gyroSet(); //when 'homed' set the gyro to 0
   scenario = 2; //state machine incrementer
 }
 
@@ -349,7 +366,7 @@ void rotate() {
       measure(); //measures all the sensors
 
       error = lf - lr;
-      power = controller(error, kpHomeStraight, 0.15);
+      power = controller(error, kpHomeStraight, kiRotate);
 
       left_font_motor.writeMicroseconds(1500 - power); //mechanuum kinematics
       left_rear_motor.writeMicroseconds(1500 - power);
@@ -373,6 +390,8 @@ float controller(float error, float kp, float ki) {
     integral = 0;
   } else if (abs(error) < 2) {
     integral = 0;
+  
+  
   }
 
   integral = integral + error;
@@ -417,11 +436,11 @@ void measure() {
 
   ir3ADC[index] = analogRead(irSensor3);
   mair3 = movingAverage(ir3ADC);
-  lf = 0 - pow(mair3, 3) * 0.00002456 + pow(mair3, 2) * 0.0211 - mair3 * 6.1377 + 745.7;
-
+  lf = 8427.21 * pow(mair3, -0.7334);
+  
   ir4ADC[index] = analogRead(irSensor4);
   mair4 = movingAverage(ir4ADC);
-  lr = 0 - pow(mair4, 3) * 0.00001452 + pow(mair4, 2) * 0.0124 - mair4 * 3.7308 + 525.54;
+  lr = 6265.582 * pow(mair4, -0.68559);
 
   index++;
 
