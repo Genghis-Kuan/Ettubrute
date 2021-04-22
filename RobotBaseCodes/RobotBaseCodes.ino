@@ -70,8 +70,8 @@ float kpHomeStrafe = 3.2;
 float kiHomeStrafe = 0.05;
 
 float kpDriveY = 2;
-float kiDriveY = 0.05;
-float kpDriveStraight = 18;
+float kiDriveY = 0.02;
+float kpDriveStraight = 20;
 
 float kpRotate = 4.5;
 float kiRotate = 0.1;
@@ -302,6 +302,7 @@ void drive() { //drives forward while keeping 150mm from the left wall, stops wh
   float xerror = 0;
   int fix = 1;
   float dX = 0; //needed for derivative control
+  float xint = 0;
   reset();
  
 
@@ -314,8 +315,14 @@ void drive() { //drives forward while keeping 150mm from the left wall, stops wh
 
 
     xerror = 150 - lf + lr - lf; //keeping it straight
-    dX = kpDriveStraight * xerror * fix;
+    xint += xerror;
+    dX = (kpDriveStraight * xerror + xint * 0.3) * fix ;
     dX = constrain(dX, -300, 300); //motor protection
+    if (abs(xerror) > over) { //prevents integral windup
+    xint = 0;
+    } else if (abs(xerror) < 2) {
+    xint = 0;
+    }
 
     if (abs(error) < 30) { //stops the wackness at the end where it rotates randomly
       fix = 0;
@@ -375,6 +382,8 @@ void rotate() {
       end = endCondition(error, end, toleranceParallel); //accounts for overshoot endCondition(error, end, tol);
     } while (end < 15); //overshoot protection
 
+    
+
     reset();
     rotations++;
     scenario = 2;
@@ -390,13 +399,11 @@ float controller(float error, float kp, float ki) {
     integral = 0;
   } else if (abs(error) < 2) {
     integral = 0;
-  
-  
   }
 
   integral = integral + error;
   u = kp * error + ki * integral;
-  power = constrain(u, -450, 450); //motor saftey
+  power = constrain(u, -400, 400); //motor saftey
   return power;
 }
 
