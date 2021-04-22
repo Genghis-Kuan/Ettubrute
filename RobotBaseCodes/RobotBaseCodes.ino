@@ -71,7 +71,8 @@ float kiHomeStrafe = 0.05;
 
 float kpDriveY = 2;
 float kiDriveY = 0.02;
-float kpDriveStraight = 20;
+float kpDriveStraight = 18;
+float kiDriveStraight = 0.03;
 
 float kpRotate = 4.5;
 float kiRotate = 0.1;
@@ -90,13 +91,20 @@ int scenario = 1; //scenario decides the beginning case
 
 //other variables used
 float error = 0;
-float integral = 0;
+float integral[] = {0,0};
 float power = 0;
 float u = 0;
 float angle = 90;
 
+float xerror = 0;
+float rerror = 0;
+int fix = 1;
+float dX = 0; //needed for derivative control
+float dr = 0;
+
 int count = 0;
 int end = 0;
+int end1 = 0;
 int rotations = 0;
 
 //set up IR sensors, ultra sonic and gyro
@@ -223,9 +231,9 @@ STATE running() {
     stop();
     measure();
     Serial.print("LF ");
-   Serial.println(mair3);
+   Serial.println(lf);
    Serial.print("LR ");
-   Serial.println(mair4);
+   Serial.println(lr);
    delay(100);
   }
   //end of my code -------------------------------------------------------------------------------------------------
@@ -236,102 +244,58 @@ STATE running() {
 //functions
 void home() { //aligns the robot at the beginning and zeros the gyro
 
-  reset(); //resets  reused variables to 0
-
-  do { //rotate
-
-    measure(); //measures all the sensors
-
-    if (lf > 250) { //assumes if the sensor range is far that it is needs to be rotated ccw
-      power = 150;
-      error = 10;
-    } else {
-      error = lf - lr;
-      power = controller(error, kpHomeStraight, kiHomeStraight);
-    }
-
-    left_font_motor.writeMicroseconds(1500 - power); //mechanuum kinematics
-    left_rear_motor.writeMicroseconds(1500 - power);
-    right_rear_motor.writeMicroseconds(1500 - power);
-    right_font_motor.writeMicroseconds(1500 - power);
-    end = endCondition(error, end, toleranceParallel); //accounts for overshoot
-  } while (end < 5); //overshoot protection
-
-  //gyroSet(); //when 'homed' set the gyro to 0
   reset();
 
-  do { //strafe to align with the left wall
+  do {
+  
+  measure();
+    
+  xerror = 150 - lf; 
+  rerror = lr - lf; //keeping it straight
+  
+  dX = controller(xerror, 3, 0.04, 0);
+  dr = controller(rerror, 3, 0.04, 1);
 
-    measure();
-    error = 150 - lf;
-    power = controller(error, kpHomeStrafe, kiHomeStrafe);
+  
+  left_font_motor.writeMicroseconds(1500 + dr + dX); //mechanuum kinematics
+  left_rear_motor.writeMicroseconds(1500 + dr - dX);
+  right_rear_motor.writeMicroseconds(1500 + dr - dX);
+  right_font_motor.writeMicroseconds(1500 + dr + dX);
+  
+  end = endCondition(xerror, end, toleranceX); //accounts for overshoot
+  end1 = endCondition(rerror, end1, toleranceX); //accounts for overshoot
+  
+  } while (end < 10 && end1 < 10);
 
-    left_font_motor.writeMicroseconds(1500 + power); //mechanuum kinematics
-    left_rear_motor.writeMicroseconds(1500 - power);
-    right_rear_motor.writeMicroseconds(1500 - power);
-    right_font_motor.writeMicroseconds(1500 + power);
-    end = endCondition(error, end, toleranceX); //accounts for overshoot
-  } while (end < 10);
-
-
-    reset(); //resets  reused variables to 0
-
-  do { //rotate
-
-    measure(); //measures all the sensors
-
-
-      error = lf - lr;
-      power = controller(error, kpHomeStraight, kiHomeStraight);
-
-    left_font_motor.writeMicroseconds(1500 - power); //mechanuum kinematics
-    left_rear_motor.writeMicroseconds(1500 - power);
-    right_rear_motor.writeMicroseconds(1500 - power);
-    right_font_motor.writeMicroseconds(1500 - power);
-    end = endCondition(error, end, toleranceParallel); //accounts for overshoot
-  } while (end < 15); //overshoot protection
-
-gyroSet(); //when 'homed' set the gyro to 0
+  gyroSet(); //when 'homed' set the gyro to 0
   scenario = 2; //state machine incrementer
 }
 
 void drive() { //drives forward while keeping 150mm from the left wall, stops when 150mm from the front wall
 
-
-
-  float xerror = 0;
-  int fix = 1;
-  float dX = 0; //needed for derivative control
-  float xint = 0;
   reset();
- 
 
   do {
 
     measure();
-    error = 150 - Y; //error from the front facing ultrasonic sensor
-    power = controller(error, kpDriveY, kiDriveY);
+    error = 150 - Y; //error from the front facing ultrasonic sensor  
+    xerror = 150 - lf;
+    rerror = lr - lf; //keeping it straight
 
-
-
-    xerror = 150 - lf + lr - lf; //keeping it straight
-    xint += xerror;
-    dX = (kpDriveStraight * xerror + xint * 0.3) * fix ;
+    power = controller(error, kpDriveY, kiDriveY, 0);
+    dX = 15 * xerror * fix ;
+    dr = 10 * rerror * fix ;
     dX = constrain(dX, -300, 300); //motor protection
-    if (abs(xerror) > over) { //prevents integral windup
-    xint = 0;
-    } else if (abs(xerror) < 2) {
-    xint = 0;
-    }
-
+    dr = constrain(dr, -300, 300);
+    
     if (abs(error) < 30) { //stops the wackness at the end where it rotates randomly
       fix = 0;
     }
-	
-    left_font_motor.writeMicroseconds(1500 - power + dX); //mechanuum kinematics
-    left_rear_motor.writeMicroseconds(1500 - power + dX);
-    right_rear_motor.writeMicroseconds(1500 + power + dX);
-    right_font_motor.writeMicroseconds(1500 + power + dX);
+  
+    left_font_motor.writeMicroseconds(1500 - power + dr + dX); //mechanuum kinematics
+    left_rear_motor.writeMicroseconds(1500 - power + dr - dX);
+    right_rear_motor.writeMicroseconds(1500 + power + dr - dX);
+    right_font_motor.writeMicroseconds(1500 + power + dr + dX);
     end = endCondition(error, end, toleranceY); //accounts for overshoot
 
   } while (end < 10);
@@ -349,7 +313,6 @@ void rotate() {
 
       readGyro();
       if (currentAngle > 330) {
-
         addon = (360 - currentAngle);
         currentAngle = 0;
       } else {
@@ -357,7 +320,7 @@ void rotate() {
       }
 
       error = angle - (currentAngle + addon);
-      power = controller(error, kpRotate, kiRotate);
+      power = controller(error, kpRotate, kiRotate, 0);
 
       left_font_motor.writeMicroseconds(1500 + power); //mechanuum kinematics
       left_rear_motor.writeMicroseconds(1500 + power);
@@ -366,44 +329,24 @@ void rotate() {
 
     } while (error > 5); //get within 5 degrees
 
-    reset();
-
-    do {
-
-      measure(); //measures all the sensors
-
-      error = lf - lr;
-      power = controller(error, kpHomeStraight, kiRotate);
-
-      left_font_motor.writeMicroseconds(1500 - power); //mechanuum kinematics
-      left_rear_motor.writeMicroseconds(1500 - power);
-      right_rear_motor.writeMicroseconds(1500 - power);
-      right_font_motor.writeMicroseconds(1500 - power);
-      end = endCondition(error, end, toleranceParallel); //accounts for overshoot endCondition(error, end, tol);
-    } while (end < 15); //overshoot protection
-
-    
-
-    reset();
     rotations++;
-    scenario = 2;
+    scenario = 1;
   } else {
     scenario = 4;
   }
   angle += 85; //keeps track of the predicted angle of the robot (with 10 deg tolerance)
 }
 
-float controller(float error, float kp, float ki) {
+float controller(float error, float kp, float ki, int s) {
 
   if (abs(error) > over) { //prevents integral windup
-    integral = 0;
+    integral[s] = 0;
   } else if (abs(error) < 2) {
-    integral = 0;
+    integral[s] = 0;
   }
-
-  integral = integral + error;
-  u = kp * error + ki * integral;
-  power = constrain(u, -400, 400); //motor saftey
+  integral[s] += error;
+  u = kp * error + ki * integral[s];
+  power = constrain(u, -300, 300); //motor saftey
   return power;
 }
 
@@ -424,22 +367,16 @@ void reset() { //resets certain values so they can be used by other functions
   count = 0;
   error = 0;
   end = 0;
+  end1 = 0;
+  xerror = 0;
+  rerror = 0;
+  fix = 1;
+  dX = 0; //needed for derivative control
+  dr = 0;
 
 }
 
 void measure() {
-
-
-  /* for project 2
-    ir1ADC[index] = analogRead(irSensor1);
-    mair1 = movingAverage(ir1ADC);
-    fl = 0 - pow(mair1, 3) * 0.000004 + pow(mair1, 2) * 0.0056 - mair1 * 2.9377 + 708.67;
-
-    ir2ADC[index] = analogRead(irSensor2 );
-    mair2 = movingAverage(ir2ADC);
-    fr = 0 - pow(mair2, 3) * 0.000005 + pow(mair2, 2) * 0.0072 - mair2 * 3.7209 + 831.08;
-
-  */
 
   ir3ADC[index] = analogRead(irSensor3);
   mair3 = movingAverage(ir3ADC);
@@ -512,7 +449,15 @@ float movingAverage(float irArray[10]) {
   return ma;
 }
 
-//Provide code -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------//
+
+
+
+
+
+
+
+
+//Provided code -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------//
 
 //Stop of Lipo Battery voltage is too low, to protect Battery
 STATE stopped() {
